@@ -18,6 +18,7 @@ Route::prefix('v1')->group(function () {
     Route::post('workout-programs', [WorkoutProgramController::class, 'store']);
     Route::put('workout-programs/{id}', [WorkoutProgramController::class, 'update']);
     Route::delete('workout-programs/{id}', [WorkoutProgramController::class, 'destroy']);
+    Route::post('workout-programs/{id}/duplicate', [WorkoutProgramController::class, 'duplicate']);
 
     // Program Exercises — matches ProgramExerciseRepository contract
     Route::get(

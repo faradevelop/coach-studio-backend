@@ -5,13 +5,19 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WorkoutProgram\StoreWorkoutProgramRequest;
 use App\Http\Requests\WorkoutProgram\UpdateWorkoutProgramRequest;
+use App\Http\Requests\WorkoutProgram\DuplicateWorkoutProgramRequest;
 use App\Http\Resources\WorkoutProgramResource;
 use App\Models\WorkoutProgram;
+use App\Services\WorkoutProgramService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
 class WorkoutProgramController extends Controller
 {
+      public function __construct(private readonly WorkoutProgramService $service)
+    {
+    }
+
     public function index(): JsonResponse
     {
         $programs = WorkoutProgram::orderBy('title')->get();
@@ -58,5 +64,12 @@ class WorkoutProgramController extends Controller
         $program->delete(); // hard delete — cascades to program_exercises
 
         return ApiResponse::success(null, 'Workout program deleted');
+    }
+
+        public function duplicate(DuplicateWorkoutProgramRequest $request, string $id): JsonResponse
+    {
+        $copy = $this->service->duplicate($id, $request->validated('title'));
+
+        return ApiResponse::success(new WorkoutProgramResource($copy), 'Workout program duplicated', 201);
     }
 }
