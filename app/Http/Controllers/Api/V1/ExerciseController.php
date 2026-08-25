@@ -32,6 +32,7 @@ class ExerciseController extends Controller
 
     public function store(StoreExerciseRequest $request): JsonResponse
     {
+        $this->authorize('create', Exercise::class);
         $data = $request->validated();
 
         $exercise = Exercise::create([
@@ -53,6 +54,7 @@ class ExerciseController extends Controller
     public function update(UpdateExerciseRequest $request, string $id): JsonResponse
     {
         $exercise = Exercise::findOrFail($id);
+        $this->authorize('update', $exercise);
         $data = $request->validated();
 
         $exercise->update([
@@ -74,6 +76,7 @@ class ExerciseController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $exercise = Exercise::findOrFail($id);
+        $this->authorize('delete', $exercise);
         $exercise->update(['is_active' => false]); // soft delete only
 
         return ApiResponse::success(null, 'Exercise deleted');

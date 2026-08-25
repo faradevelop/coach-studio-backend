@@ -16,15 +16,14 @@ class WorkoutProgramService
      * ProgramExerciseItems in the copy keep referencing the SAME Exercise
      * rows as the original — the exercise catalog is never duplicated.
      */
-    public function duplicate(string $workoutProgramId, ?string $requestedTitle): WorkoutProgram
+    public function duplicate(string $workoutProgramId, ?string $requestedTitle, string $ownerId): WorkoutProgram
     {
-        return DB::transaction(function () use ($workoutProgramId, $requestedTitle) {
-            $original = WorkoutProgram::with('programExercises.items')
-                ->findOrFail($workoutProgramId);
-
+        return DB::transaction(function () use ($workoutProgramId, $requestedTitle, $ownerId) {
+            $original = WorkoutProgram::with('programExercises.items')->findOrFail($workoutProgramId);
             $title = $this->resolveTitle($requestedTitle, $original->title);
 
             $copy = WorkoutProgram::create([
+                'user_id' => $ownerId, // NEW — the copy always belongs to whoever requested it
                 'title' => $title,
                 'goal' => $original->goal,
                 'level' => $original->level,
