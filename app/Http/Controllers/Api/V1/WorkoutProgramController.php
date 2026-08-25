@@ -20,7 +20,7 @@ class WorkoutProgramController extends Controller
 
     public function index(): JsonResponse
     {
-        $programs = WorkoutProgram::orderBy('title')->get();
+        $programs = WorkoutProgram::orderByDesc('created_at')->get();
 
         return ApiResponse::success(WorkoutProgramResource::collection($programs));
     }
