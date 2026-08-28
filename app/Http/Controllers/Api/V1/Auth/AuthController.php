@@ -12,6 +12,7 @@ use App\Services\AuthService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -32,7 +33,12 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $this->service->logout($request->user());
+        $token = $request->user()->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            $this->service->logout($token);
+        }
+
         return ApiResponse::success(null, 'Logged out');
     }
 

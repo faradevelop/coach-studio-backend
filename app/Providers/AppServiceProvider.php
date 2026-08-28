@@ -35,10 +35,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
 
         RateLimiter::for('auth', function (Request $request) {
-            return Limit::perMinute(5)->by($request->ip());
-        });
-
-        RateLimiter::for('auth', function (Request $request) {
             $identifier = Str::lower((string) ($request->input('identifier') ?? $request->input('email') ?? ''));
 
             return [

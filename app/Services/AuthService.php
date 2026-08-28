@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
@@ -28,9 +29,9 @@ class AuthService
         return ['user' => $user, 'token' => $token];
     }
 
-    public function logout(User $user): void
+    public function logout(PersonalAccessToken $token): void
     {
-        $user->currentAccessToken()->delete();
+        $token->delete();
     }
 
     public function changePassword(User $user, string $currentPassword, string $newPassword): void
