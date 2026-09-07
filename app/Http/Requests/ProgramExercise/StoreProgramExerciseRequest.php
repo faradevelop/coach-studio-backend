@@ -23,7 +23,8 @@ class StoreProgramExerciseRequest extends FormRequest
             'trainingSystem' => ['required', 'string', Rule::in(['normal', 'superSet'])],
             'items' => ['required', 'array', 'min:1', 'max:2'],
             'items.*.exerciseId' => ['required', 'uuid', 'exists:exercises,id'],
-            'items.*.reps' => ['required', 'string', 'max:20'],
+            'items.*.reps' => ['required', 'array', 'min:1'],
+            'items.*.reps.*' => ['required', 'string', 'max:20'],
             'items.*.tempo' => ['required', 'string', 'max:20'],
             'items.*.description' => ['nullable', 'string'],
         ];

@@ -19,7 +19,7 @@ return new class extends Migration
                 ->restrictOnDelete() // Exercise deletion is soft-delete only in the app
                 ->cascadeOnUpdate();
             $table->unsignedInteger('order_index'); // Dart `order` (1 or 2 within a block)
-            $table->string('reps', 20);
+            $table->json('reps');
             $table->string('tempo', 20);
             $table->text('description')->nullable();
             $table->timestamps();

@@ -21,6 +21,7 @@ class ProgramExerciseItem extends Model
 
     protected $casts = [
         'order_index' => 'integer',
+        'reps' => 'array',
     ];
 
     public function programExercise(): BelongsTo
