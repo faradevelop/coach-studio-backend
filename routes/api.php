@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\ExerciseController;
 use App\Http\Controllers\Api\V1\ProgramExerciseController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkoutProgramController;
+use App\Http\Controllers\Api\V1\WorkoutProgramDayController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -37,6 +38,11 @@ Route::prefix('v1')->group(function () {
         Route::put('workout-programs/{id}', [WorkoutProgramController::class, 'update']);
         Route::delete('workout-programs/{id}', [WorkoutProgramController::class, 'destroy']);
         Route::post('workout-programs/{id}/duplicate', [WorkoutProgramController::class, 'duplicate']);
+        // Workout Program Days — days are implicit (1..days_per_week); ownership
+        // enforced via the parent WorkoutProgram (scoped query + WorkoutProgramPolicy::update)
+        Route::post('workout-programs/{id}/days', [WorkoutProgramDayController::class, 'store']);
+        Route::delete('workout-programs/{id}/days/{day}', [WorkoutProgramDayController::class, 'destroy'])->whereNumber('day');
+        Route::patch('workout-programs/{id}/days/{day}/reorder', [WorkoutProgramDayController::class, 'reorder'])->whereNumber('day');
 
         // Program Exercises — ownership enforced via the parent WorkoutProgram
         Route::get('workout-programs/{workoutProgramId}/program-exercises', [ProgramExerciseController::class, 'index']);
