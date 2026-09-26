@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\ExerciseType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Exercise extends Model
 {
@@ -12,7 +14,7 @@ class Exercise extends Model
 
     protected $fillable = [
         'name',
-        'target_muscle',
+        'type',
         'difficulty',
         'equipment',
         'image_url',
@@ -24,6 +26,12 @@ class Exercise extends Model
     ];
 
     protected $casts = [
+        'type' => ExerciseType::class,
         'is_active' => 'boolean',
     ];
+
+    public function muscles(): BelongsToMany
+    {
+        return $this->belongsToMany(Muscle::class, 'exercise_muscle');
+    }
 }

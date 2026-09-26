@@ -12,7 +12,8 @@ class ExerciseResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'targetMuscle' => $this->target_muscle,
+            'type' => $this->type?->value,
+            'muscles' => MuscleResource::collection($this->whenLoaded('muscles')),
             'difficulty' => $this->difficulty,
             'equipment' => $this->equipment,
             'imageUrl' => $this->image_url,

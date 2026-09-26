@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\ExerciseController;
+use App\Http\Controllers\Api\V1\MuscleController;
 use App\Http\Controllers\Api\V1\ProgramExerciseController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkoutProgramController;
@@ -31,6 +32,9 @@ Route::prefix('v1')->group(function () {
         Route::post('exercises', [ExerciseController::class, 'store']);
         Route::put('exercises/{id}', [ExerciseController::class, 'update']);
         Route::delete('exercises/{id}', [ExerciseController::class, 'destroy']);
+
+        // Muscles — read-only reference catalog, any authenticated user
+        Route::get('muscles', [MuscleController::class, 'index']);
 
         // Workout Programs — scoped to the authenticated coach, or all for admins
         Route::get('workout-programs', [WorkoutProgramController::class, 'index']);
