@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ExerciseType;
 use App\Models\Exercise;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -13,7 +14,7 @@ class ExerciseFactory extends Factory
     {
         return [
             'name' => $this->faker->words(2, true),
-            'target_muscle' => 'Chest',
+            'type' => ExerciseType::Strength->value,
             'difficulty' => 'Beginner',
             'equipment' => 'Barbell',
             'is_active' => true,

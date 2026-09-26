@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\Exercise;
+use App\Models\Muscle;
 use App\Models\User;
 use App\Models\WorkoutProgram;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -121,6 +122,14 @@ class AuthorizationTest extends TestCase
 
     private function validExercisePayload(): array
     {
-        return ['name' => 'Squat', 'targetMuscle' => 'Legs', 'difficulty' => 'Beginner', 'equipment' => 'Barbell'];
+        $muscle = Muscle::factory()->create();
+
+        return [
+            'name' => 'Squat',
+            'type' => 'strength',
+            'difficulty' => 'Beginner',
+            'equipment' => 'Barbell',
+            'muscleSlugs' => [$muscle->slug],
+        ];
     }
 }
