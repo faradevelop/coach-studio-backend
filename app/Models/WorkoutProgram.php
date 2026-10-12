@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WorkoutProgram extends Model
 {
@@ -35,5 +36,14 @@ class WorkoutProgram extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Set only when this program is an athlete-specific clone. Read-only,
+     * derived link — there is deliberately no athlete_id on workout_programs.
+     */
+    public function athleteAssignment(): HasOne
+    {
+        return $this->hasOne(AthleteProgramAssignment::class, 'workout_program_id');
     }
 }

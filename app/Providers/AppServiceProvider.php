@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 use Illuminate\Support\Facades\Gate;
-use App\Models\{Exercise, ProgramExercise, User, WorkoutProgram};
-use App\Policies\{ExercisePolicy, ProgramExercisePolicy, UserPolicy, WorkoutProgramPolicy};
+use App\Models\{Athlete, Exercise, ProgramExercise, User, WorkoutProgram};
+use App\Policies\{AthletePolicy, ExercisePolicy, ProgramExercisePolicy, UserPolicy, WorkoutProgramPolicy};
 
 
 class AppServiceProvider extends ServiceProvider
@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(WorkoutProgram::class, WorkoutProgramPolicy::class);
         Gate::policy(ProgramExercise::class, ProgramExercisePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(Athlete::class, AthletePolicy::class);
 
         RateLimiter::for('auth', function (Request $request) {
             $identifier = Str::lower((string) ($request->input('identifier') ?? $request->input('email') ?? ''));

@@ -40,6 +40,36 @@ class WorkoutProgramService
         });
     }
 
+    /**
+     * Clones $source into an athlete-specific program owned by $ownerId
+     * (the athlete's coach). The source is only read, never modified.
+     * The clone keeps the source title unless $title is given, and is
+     * not a template. Safe to call inside an outer transaction.
+     */
+    public function cloneForAthlete(WorkoutProgram $source, string $ownerId, ?string $title = null): WorkoutProgram
+    {
+        return DB::transaction(function () use ($source, $ownerId, $title) {
+            $original = WorkoutProgram::with('programExercises.items')->findOrFail($source->id);
+            $trimmed = trim((string) $title);
+
+            $copy = WorkoutProgram::create([
+                'user_id' => $ownerId,
+                'title' => $trimmed !== '' ? $trimmed : $original->title,
+                'goal' => $original->goal,
+                'level' => $original->level,
+                'days_per_week' => $original->days_per_week,
+                'notes' => $original->notes,
+                'is_template' => false,
+            ]);
+
+            foreach ($original->programExercises as $programExercise) {
+                $this->copyProgramExercise($programExercise, $copy->id);
+            }
+
+            return $copy->fresh();
+        });
+    }
+
     // private function resolveTitle(?string $requestedTitle, string $originalTitle): string
     // {
     //     $trimmed = trim((string) $requestedTitle);

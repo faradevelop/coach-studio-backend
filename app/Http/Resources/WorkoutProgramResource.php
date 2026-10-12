@@ -17,6 +17,12 @@ class WorkoutProgramResource extends JsonResource
             'daysPerWeek' => $this->days_per_week,
             'notes' => $this->notes,
             'isTemplate' => (bool) $this->is_template,
+            // Derived, read-only. Only present when athleteAssignment is eager-loaded
+            // (show endpoint); null for a normal program, athlete id for an athlete copy.
+            'athleteId' => $this->when(
+                $this->resource->relationLoaded('athleteAssignment'),
+                fn () => $this->athleteAssignment?->athlete_id
+            ),
         ];
     }
 }

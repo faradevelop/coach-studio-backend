@@ -12,6 +12,7 @@ use App\Services\WorkoutProgramService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class WorkoutProgramController extends Controller
 {
@@ -19,8 +20,21 @@ class WorkoutProgramController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $programs = $this->scopedQuery($request)->orderBy('title')->get();
+        // Athlete-specific clones are reached through the athlete, not the coach's own list.
+        $programs = $this->scopedQuery($request)
+            ->whereDoesntHave('athleteAssignment')
+            ->orderBy('title')
+            ->get();
+
         return ApiResponse::success(WorkoutProgramResource::collection($programs));
+    }
+
+    public function show(Request $request, string $id): JsonResponse
+    {
+        $program = $this->scopedQuery($request)->with('athleteAssignment')->findOrFail($id);
+        $this->authorize('view', $program);
+
+        return ApiResponse::success(new WorkoutProgramResource($program));
     }
 
     public function store(StoreWorkoutProgramRequest $request): JsonResponse
@@ -64,6 +78,15 @@ class WorkoutProgramController extends Controller
     {
         $program = $this->scopedQuery($request)->findOrFail($id);
         $this->authorize('delete', $program);
+
+        // An athlete's program is part of their history; deleting it would also
+        // violate the assignment foreign key.
+        if ($program->athleteAssignment()->exists()) {
+            throw ValidationException::withMessages([
+                'program' => ['This program is assigned to an athlete and cannot be deleted.'],
+            ]);
+        }
+
         $program->delete();
 
         return ApiResponse::success(null, 'Workout program deleted');

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\AthleteController;
 use App\Http\Controllers\Api\V1\ExerciseController;
 use App\Http\Controllers\Api\V1\MuscleController;
 use App\Http\Controllers\Api\V1\ProgramExerciseController;
@@ -38,6 +39,7 @@ Route::prefix('v1')->group(function () {
 
         // Workout Programs — scoped to the authenticated coach, or all for admins
         Route::get('workout-programs', [WorkoutProgramController::class, 'index']);
+        Route::get('workout-programs/{id}', [WorkoutProgramController::class, 'show']);
         Route::post('workout-programs', [WorkoutProgramController::class, 'store']);
         Route::put('workout-programs/{id}', [WorkoutProgramController::class, 'update']);
         Route::delete('workout-programs/{id}', [WorkoutProgramController::class, 'destroy']);
@@ -54,5 +56,16 @@ Route::prefix('v1')->group(function () {
         Route::put('program-exercises/{id}', [ProgramExerciseController::class, 'update']);
         Route::delete('program-exercises/{id}', [ProgramExerciseController::class, 'destroy']);
         Route::patch('program-exercises/{id}/reorder', [ProgramExerciseController::class, 'reorder']);
+
+        // Athletes — scoped to the owning coach (admins see all). `summary` must stay above `{id}`.
+        Route::get('athletes', [AthleteController::class, 'index']);
+        Route::get('athletes/summary', [AthleteController::class, 'summary']);
+        Route::post('athletes', [AthleteController::class, 'store']);
+        Route::get('athletes/{id}', [AthleteController::class, 'show']);
+        Route::put('athletes/{id}', [AthleteController::class, 'update']);
+        Route::post('athletes/{id}/archive', [AthleteController::class, 'archive']);
+        Route::post('athletes/{id}/restore', [AthleteController::class, 'restore']);
+        Route::get('athletes/{id}/program-history', [AthleteController::class, 'programHistory']);
+        Route::post('athletes/{id}/program-assignments', [AthleteController::class, 'assignProgram']);
     });
 });
