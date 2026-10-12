@@ -9,9 +9,9 @@ use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
 use App\Models\Muscle;
 use App\Support\ApiResponse;
+use App\Support\TextNormalizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ExerciseController extends Controller
 {
@@ -19,6 +19,24 @@ class ExerciseController extends Controller
     {
         $exercises = Exercise::query()
             ->where('is_active', true)
+            ->when(
+                $request->filled('search'),
+                function ($q) use ($request) {
+                    $term = TextNormalizer::normalize(
+                        mb_substr((string) $request->input('search'), 0, 100)
+                    );
+
+                    // Every word must appear in the name ("press bench" matches "Bench Press").
+                    foreach (explode(' ', (string) $term) as $token) {
+                        if ($token === '') {
+                            continue;
+                        }
+
+                        $like = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $token) . '%';
+                        $q->whereRaw("name LIKE ? ESCAPE '!'", [$like]);
+                    }
+                }
+            )
             ->when(
                 $request->filled('type'),
                 fn ($q) => $q->where('type', $request->string('type'))
@@ -36,10 +54,6 @@ class ExerciseController extends Controller
                     'equipment',
                     $request->string('equipment')
                 )
-            )
-            ->when(
-                $request->filled('search'),
-                fn ($q) => $q->where('name', 'like', '%' . trim((string) $request->input('search')) . '%')
             )
             ->when(
                 $request->filled('muscles'),
@@ -80,24 +94,29 @@ class ExerciseController extends Controller
         $this->authorize('create', Exercise::class);
         $data = $request->validated();
 
-        $exercise = DB::transaction(function () use ($data) {
-            $exercise = Exercise::create([
-                'name' => $data['name'],
-                'type' => $data['type'],
-                'difficulty' => $data['difficulty'],
-                'equipment' => $data['equipment'],
-                'image_url' => $data['imageUrl'] ?? null,
-                'video_url' => $data['videoUrl'] ?? null,
-                'description' => $data['description'] ?? null,
-                'instructions' => $data['instructions'] ?? null,
-                'mistakes' => $data['mistakes'] ?? null,
-                'is_active' => $data['isActive'] ?? true,
-            ]);
-            $this->syncMuscles($exercise, $data['muscleSlugs']);
-            return $exercise;
-        });
+        $exercise = Exercise::create([
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'difficulty' => $data['difficulty'],
+            'equipment' => $data['equipment'],
+            'image_url' => $data['imageUrl'] ?? null,
+            'video_url' => $data['videoUrl'] ?? null,
+            'description' => $data['description'] ?? null,
+            'instructions' => $data['instructions'] ?? null,
+            'mistakes' => $data['mistakes'] ?? null,
+            'is_active' => $data['isActive'] ?? true,
+        ]);
 
-        return ApiResponse::success(new ExerciseResource($exercise->fresh('muscles')), 'Exercise created', 201);
+        $this->syncMuscles(
+            $exercise,
+            $data['muscleSlugs']
+        );
+
+        return ApiResponse::success(
+            new ExerciseResource($exercise->fresh('muscles')),
+            'Exercise created',
+            201
+        );
     }
 
     public function update(
@@ -108,21 +127,23 @@ class ExerciseController extends Controller
         $this->authorize('update', $exercise);
         $data = $request->validated();
 
-        DB::transaction(function () use ($exercise, $data) {
-            $exercise->update([
-                'name' => $data['name'],
-                'type' => $data['type'],
-                'difficulty' => $data['difficulty'],
-                'equipment' => $data['equipment'],
-                'image_url' => $data['imageUrl'] ?? null,
-                'video_url' => $data['videoUrl'] ?? null,
-                'description' => $data['description'] ?? null,
-                'instructions' => $data['instructions'] ?? null,
-                'mistakes' => $data['mistakes'] ?? null,
-                'is_active' => $data['isActive'] ?? $exercise->is_active,
-            ]);
-            $this->syncMuscles($exercise, $data['muscleSlugs']);
-        });
+        $exercise->update([
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'difficulty' => $data['difficulty'],
+            'equipment' => $data['equipment'],
+            'image_url' => $data['imageUrl'] ?? null,
+            'video_url' => $data['videoUrl'] ?? null,
+            'description' => $data['description'] ?? null,
+            'instructions' => $data['instructions'] ?? null,
+            'mistakes' => $data['mistakes'] ?? null,
+            'is_active' => $data['isActive'] ?? $exercise->is_active,
+        ]);
+
+        $this->syncMuscles(
+            $exercise,
+            $data['muscleSlugs']
+        );
 
         return ApiResponse::success(
             new ExerciseResource($exercise->fresh('muscles')),
