@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -42,19 +41,12 @@ class WorkoutProgramDayController extends Controller
         return ApiResponse::success(new WorkoutProgramResource($updated), 'Workout program day reordered');
     }
 
-    /**
-     * Query-scoped first (404 if not owned/visible), Policy second —
-     * same defense-in-depth as WorkoutProgramController.
-     */
     private function resolveProgram(Request $request, string $id): WorkoutProgram
     {
-        $query = WorkoutProgram::query();
-
-        if (!$request->user()->isAdmin()) {
-            $query->where('user_id', $request->user()->id);
-        }
-
-        $program = $query->findOrFail($id);
+        // Query-scoped first (404 if not owned), Policy second — defense in depth.
+        $program = WorkoutProgram::query()
+            ->where('user_id', $request->user()->id)
+            ->findOrFail($id);
         $this->authorize('update', $program);
 
         return $program;

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -97,19 +96,12 @@ class ProgramExerciseController extends Controller
 
     private function scopedProgramQuery(Request $request)
     {
-        $query = WorkoutProgram::query();
-        if (!$request->user()->isAdmin()) {
-            $query->where('user_id', $request->user()->id);
-        }
-        return $query;
+        return WorkoutProgram::query()->where('user_id', $request->user()->id);
     }
 
     private function scopedItemQuery(Request $request)
     {
-        $query = ProgramExercise::query();
-        if (!$request->user()->isAdmin()) {
-            $query->whereHas('workoutProgram', fn ($q) => $q->where('user_id', $request->user()->id));
-        }
-        return $query;
+        return ProgramExercise::query()
+            ->whereHas('workoutProgram', fn($q) => $q->where('user_id', $request->user()->id));
     }
 }

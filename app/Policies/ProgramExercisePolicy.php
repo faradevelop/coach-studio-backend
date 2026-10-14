@@ -12,12 +12,12 @@ class ProgramExercisePolicy
     // against the parent WorkoutProgram instead.
     public function create(User $user, WorkoutProgram $workoutProgram): bool
     {
-        return $user->isAdmin() || $workoutProgram->user_id === $user->id;
+        return $user->isCoach() && $workoutProgram->user_id === $user->id;
     }
 
     public function update(User $user, ProgramExercise $programExercise): bool
     {
-        return $user->isAdmin() || $programExercise->workoutProgram->user_id === $user->id;
+        return $user->isCoach() && $programExercise->workoutProgram->user_id === $user->id;
     }
 
     public function delete(User $user, ProgramExercise $programExercise): bool

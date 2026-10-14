@@ -17,55 +17,60 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth');
 
     Route::middleware('auth:sanctum')->group(function () {
+        // ── Any authenticated user ───────────────────────────────────────
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
         Route::post('auth/change-password', [AuthController::class, 'changePassword']);
 
-        // Users — admin-only, enforced via UserPolicy
-        Route::get('users', [UserController::class, 'index']);
-        Route::post('users', [UserController::class, 'store']);
-        Route::put('users/{id}', [UserController::class, 'update']);
-        Route::delete('users/{id}', [UserController::class, 'destroy']);
-
-        // Exercises — read: any user, write: admin only (ExercisePolicy)
+        // Read-only reference data: the Exercise Bank is read by coaches and managed by admins.
         Route::get('exercises', [ExerciseController::class, 'index']);
         Route::get('exercises/{id}', [ExerciseController::class, 'show']);
-        Route::post('exercises', [ExerciseController::class, 'store']);
-        Route::put('exercises/{id}', [ExerciseController::class, 'update']);
-        Route::delete('exercises/{id}', [ExerciseController::class, 'destroy']);
-
-        // Muscles — read-only reference catalog, any authenticated user
         Route::get('muscles', [MuscleController::class, 'index']);
 
-        // Workout Programs — scoped to the authenticated coach, or all for admins
-        Route::get('workout-programs', [WorkoutProgramController::class, 'index']);
-        Route::get('workout-programs/{id}', [WorkoutProgramController::class, 'show']);
-        Route::post('workout-programs', [WorkoutProgramController::class, 'store']);
-        Route::put('workout-programs/{id}', [WorkoutProgramController::class, 'update']);
-        Route::delete('workout-programs/{id}', [WorkoutProgramController::class, 'destroy']);
-        Route::post('workout-programs/{id}/duplicate', [WorkoutProgramController::class, 'duplicate']);
-        // Workout Program Days — days are implicit (1..days_per_week); ownership
-        // enforced via the parent WorkoutProgram (scoped query + WorkoutProgramPolicy::update)
-        Route::post('workout-programs/{id}/days', [WorkoutProgramDayController::class, 'store']);
-        Route::delete('workout-programs/{id}/days/{day}', [WorkoutProgramDayController::class, 'destroy'])->whereNumber('day');
-        Route::patch('workout-programs/{id}/days/{day}/reorder', [WorkoutProgramDayController::class, 'reorder'])->whereNumber('day');
+        // ── Admin only: Exercise management + Coach management ───────────
+        Route::middleware('role:admin')->group(function () {
+            Route::post('exercises', [ExerciseController::class, 'store']);
+            Route::put('exercises/{id}', [ExerciseController::class, 'update']);
+            Route::delete('exercises/{id}', [ExerciseController::class, 'destroy']);
 
-        // Program Exercises — ownership enforced via the parent WorkoutProgram
-        Route::get('workout-programs/{workoutProgramId}/program-exercises', [ProgramExerciseController::class, 'index']);
-        Route::post('program-exercises', [ProgramExerciseController::class, 'store']);
-        Route::put('program-exercises/{id}', [ProgramExerciseController::class, 'update']);
-        Route::delete('program-exercises/{id}', [ProgramExerciseController::class, 'destroy']);
-        Route::patch('program-exercises/{id}/reorder', [ProgramExerciseController::class, 'reorder']);
+            // Coach management. `DELETE` deactivates (never hard-deletes).
+            Route::get('users', [UserController::class, 'index']);
+            Route::post('users', [UserController::class, 'store']);
+            Route::put('users/{id}', [UserController::class, 'update']);
+            Route::delete('users/{id}', [UserController::class, 'destroy']);
+        });
 
-        // Athletes — scoped to the owning coach (admins see all). `summary` must stay above `{id}`.
-        Route::get('athletes', [AthleteController::class, 'index']);
-        Route::get('athletes/summary', [AthleteController::class, 'summary']);
-        Route::post('athletes', [AthleteController::class, 'store']);
-        Route::get('athletes/{id}', [AthleteController::class, 'show']);
-        Route::put('athletes/{id}', [AthleteController::class, 'update']);
-        Route::post('athletes/{id}/archive', [AthleteController::class, 'archive']);
-        Route::post('athletes/{id}/restore', [AthleteController::class, 'restore']);
-        Route::get('athletes/{id}/program-history', [AthleteController::class, 'programHistory']);
-        Route::post('athletes/{id}/program-assignments', [AthleteController::class, 'assignProgram']);
+        // ── Coach only: own programs + own athletes ──────────────────────
+        // Ownership is additionally enforced by scoped queries + Policies.
+        Route::middleware('role:coach')->group(function () {
+            Route::get('workout-programs', [WorkoutProgramController::class, 'index']);
+            Route::get('workout-programs/{id}', [WorkoutProgramController::class, 'show']);
+            Route::post('workout-programs', [WorkoutProgramController::class, 'store']);
+            Route::put('workout-programs/{id}', [WorkoutProgramController::class, 'update']);
+            Route::delete('workout-programs/{id}', [WorkoutProgramController::class, 'destroy']);
+            Route::post('workout-programs/{id}/duplicate', [WorkoutProgramController::class, 'duplicate']);
+
+            // Days are implicit (1..days_per_week); ownership via the parent WorkoutProgram.
+            Route::post('workout-programs/{id}/days', [WorkoutProgramDayController::class, 'store']);
+            Route::delete('workout-programs/{id}/days/{day}', [WorkoutProgramDayController::class, 'destroy'])->whereNumber('day');
+            Route::patch('workout-programs/{id}/days/{day}/reorder', [WorkoutProgramDayController::class, 'reorder'])->whereNumber('day');
+
+            Route::get('workout-programs/{workoutProgramId}/program-exercises', [ProgramExerciseController::class, 'index']);
+            Route::post('program-exercises', [ProgramExerciseController::class, 'store']);
+            Route::put('program-exercises/{id}', [ProgramExerciseController::class, 'update']);
+            Route::delete('program-exercises/{id}', [ProgramExerciseController::class, 'destroy']);
+            Route::patch('program-exercises/{id}/reorder', [ProgramExerciseController::class, 'reorder']);
+
+            // `summary` must stay above `{id}`.
+            Route::get('athletes', [AthleteController::class, 'index']);
+            Route::get('athletes/summary', [AthleteController::class, 'summary']);
+            Route::post('athletes', [AthleteController::class, 'store']);
+            Route::get('athletes/{id}', [AthleteController::class, 'show']);
+            Route::put('athletes/{id}', [AthleteController::class, 'update']);
+            Route::post('athletes/{id}/archive', [AthleteController::class, 'archive']);
+            Route::post('athletes/{id}/restore', [AthleteController::class, 'restore']);
+            Route::get('athletes/{id}/program-history', [AthleteController::class, 'programHistory']);
+            Route::post('athletes/{id}/program-assignments', [AthleteController::class, 'assignProgram']);
+        });
     });
 });

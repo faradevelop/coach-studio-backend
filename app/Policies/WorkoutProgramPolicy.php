@@ -7,23 +7,24 @@ use App\Models\WorkoutProgram;
 
 class WorkoutProgramPolicy
 {
+    // Admins have no access to coach programs: owner coaches only.
     public function view(User $user, WorkoutProgram $program): bool
     {
-        return $user->isAdmin() || $program->user_id === $user->id;
+        return $user->isCoach() && $program->user_id === $user->id;
     }
 
     public function create(User $user): bool
     {
-        return true; // any authenticated user (coach or admin) may create their own
+        return $user->isCoach();
     }
 
     public function update(User $user, WorkoutProgram $program): bool
     {
-        return $user->isAdmin() || $program->user_id === $user->id;
+        return $this->view($user, $program);
     }
 
     public function delete(User $user, WorkoutProgram $program): bool
     {
-        return $user->isAdmin() || $program->user_id === $user->id;
+        return $this->view($user, $program);
     }
 }

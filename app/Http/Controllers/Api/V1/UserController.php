@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -19,15 +18,16 @@ class UserController extends Controller
         private readonly UserService $service,
     ) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', User::class);
 
-        return ApiResponse::success(
-            UserResource::collection(
-                User::orderBy('username')->get()
-            )
-        );
+        $users = User::query()
+            ->when($request->filled('role'), fn($q) => $q->where('role', $request->string('role')))
+            ->orderBy('username')
+            ->get();
+
+        return ApiResponse::success(UserResource::collection($users));
     }
 
     public function store(StoreUserRequest $request): JsonResponse

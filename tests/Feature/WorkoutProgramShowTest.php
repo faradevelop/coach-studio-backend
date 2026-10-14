@@ -1,5 +1,4 @@
 <?php
-
 namespace Tests\Feature;
 
 use App\Models\Athlete;
@@ -16,7 +15,7 @@ class WorkoutProgramShowTest extends TestCase
 
     public function test_coach_can_get_own_program(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = WorkoutProgram::factory()->for($coach)->create(['title' => 'Mine']);
         Sanctum::actingAs($coach);
 
@@ -27,7 +26,7 @@ class WorkoutProgramShowTest extends TestCase
             ->assertJsonPath('data.athleteId', null);
     }
 
-    public function test_coach_cannot_get_another_coachs_program(): void
+    public function test_coach_cannot_get_another_coaches_program(): void
     {
         $program = WorkoutProgram::factory()->create();
         Sanctum::actingAs(User::factory()->create());
@@ -35,12 +34,12 @@ class WorkoutProgramShowTest extends TestCase
         $this->getJson("/api/v1/workout-programs/{$program->id}")->assertStatus(404);
     }
 
-    public function test_admin_can_get_any_program(): void
+    public function test_admin_cannot_get_any_program(): void
     {
         $program = WorkoutProgram::factory()->create();
         Sanctum::actingAs(User::factory()->admin()->create());
 
-        $this->getJson("/api/v1/workout-programs/{$program->id}")->assertOk();
+        $this->getJson("/api/v1/workout-programs/{$program->id}")->assertStatus(403);
     }
 
     public function test_missing_program_returns_404(): void
@@ -59,9 +58,9 @@ class WorkoutProgramShowTest extends TestCase
 
     public function test_athlete_copy_is_reachable_by_id_and_exposes_athlete_id(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $source = WorkoutProgram::factory()->for($coach)->create();
+        $source  = WorkoutProgram::factory()->for($coach)->create();
         Sanctum::actingAs($coach);
 
         $copyId = $this->postJson("/api/v1/athletes/{$athlete->id}/program-assignments", ['sourceProgramId' => $source->id])

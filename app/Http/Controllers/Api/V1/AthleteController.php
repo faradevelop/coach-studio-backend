@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -19,7 +18,8 @@ use Illuminate\Http\Request;
 
 class AthleteController extends Controller
 {
-    public function __construct(private readonly AthleteService $service) {}
+    public function __construct(private readonly AthleteService $service)
+    {}
 
     public function index(ListAthletesRequest $request): JsonResponse
     {
@@ -35,7 +35,7 @@ class AthleteController extends Controller
 
     public function summary(Request $request): JsonResponse
     {
-        $total = $this->scopedQuery($request)->count();
+        $total  = $this->scopedQuery($request)->count();
         $active = $this->scopedQuery($request)->whereNull('archived_at')->count();
 
         $recent = $this->scopedQuery($request)
@@ -46,10 +46,10 @@ class AthleteController extends Controller
             ->get();
 
         return ApiResponse::success([
-            'total' => $total,
-            'active' => $active,
+            'total'    => $total,
+            'active'   => $active,
             'archived' => $total - $active,
-            'recent' => AthleteResource::collection($recent),
+            'recent'   => AthleteResource::collection($recent),
         ]);
     }
 
@@ -58,7 +58,7 @@ class AthleteController extends Controller
         $this->authorize('create', Athlete::class);
         $data = $request->validated();
 
-        $coach = $this->service->resolveCoach($request->user(), $data['coachId'] ?? null);
+        $coach   = $this->service->resolveCoach($request->user(), $data['coachId'] ?? null);
         $athlete = $this->service->create($coach, $this->profileAttributes($data));
 
         return ApiResponse::success(
@@ -177,23 +177,11 @@ class AthleteController extends Controller
 
     private function scopedQuery(Request $request)
     {
-        $query = Athlete::query();
-
-        if (!$request->user()->isAdmin()) {
-            $query->where('coach_id', $request->user()->id);
-        }
-
-        return $query;
+        return Athlete::query()->where('coach_id', $request->user()->id);
     }
 
     private function scopedProgramQuery(Request $request)
     {
-        $query = WorkoutProgram::query();
-
-        if (!$request->user()->isAdmin()) {
-            $query->where('user_id', $request->user()->id);
-        }
-
-        return $query;
+        return WorkoutProgram::query()->where('user_id', $request->user()->id);
     }
 }

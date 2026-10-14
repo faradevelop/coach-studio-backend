@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Requests\Exercise;
 
 use App\Enums\ExerciseType;
@@ -10,7 +9,7 @@ class StoreExerciseRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->isAdmin() ?? false;
     }
 
     public function rules(): array

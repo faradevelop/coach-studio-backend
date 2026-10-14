@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -104,12 +103,6 @@ class WorkoutProgramController extends Controller
 
     private function scopedQuery(Request $request)
     {
-        $query = WorkoutProgram::query();
-
-        if (!$request->user()->isAdmin()) {
-            $query->where('user_id', $request->user()->id);
-        }
-
-        return $query;
+        return WorkoutProgram::query()->where('user_id', $request->user()->id);
     }
 }

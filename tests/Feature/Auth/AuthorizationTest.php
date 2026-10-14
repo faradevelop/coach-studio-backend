@@ -1,5 +1,4 @@
 <?php
-
 namespace Tests\Feature\Auth;
 
 use App\Models\Exercise;
@@ -36,8 +35,8 @@ class AuthorizationTest extends TestCase
 
     public function test_coach_cannot_update_another_coachs_workout_program(): void
     {
-        $coachA = User::factory()->create();
-        $coachB = User::factory()->create();
+        $coachA  = User::factory()->create();
+        $coachB  = User::factory()->create();
         $program = WorkoutProgram::factory()->for($coachB)->create();
         Sanctum::actingAs($coachA);
 
@@ -47,8 +46,8 @@ class AuthorizationTest extends TestCase
 
     public function test_coach_cannot_delete_another_coachs_workout_program(): void
     {
-        $coachA = User::factory()->create();
-        $coachB = User::factory()->create();
+        $coachA  = User::factory()->create();
+        $coachB  = User::factory()->create();
         $program = WorkoutProgram::factory()->for($coachB)->create();
         Sanctum::actingAs($coachA);
 
@@ -56,13 +55,14 @@ class AuthorizationTest extends TestCase
         $this->assertDatabaseHas('workout_programs', ['id' => $program->id]);
     }
 
-    public function test_admin_can_access_all_workout_programs(): void
+    public function test_admin_cannot_access_all_workout_programs(): void
     {
         $admin = User::factory()->admin()->create();
         WorkoutProgram::factory()->count(3)->create();
         Sanctum::actingAs($admin);
 
-        $this->assertCount(3, $this->getJson('/api/v1/workout-programs')->json('data'));
+        $this->getJson('/api/v1/workout-programs')
+            ->assertStatus(403);
     }
 
     public function test_admin_can_manage_users(): void
@@ -125,10 +125,10 @@ class AuthorizationTest extends TestCase
         $muscle = Muscle::factory()->create();
 
         return [
-            'name' => 'Squat',
-            'type' => 'strength',
-            'difficulty' => 'Beginner',
-            'equipment' => 'Barbell',
+            'name'        => 'Squat',
+            'type'        => 'strength',
+            'difficulty'  => 'Beginner',
+            'equipment'   => 'Barbell',
             'muscleSlugs' => [$muscle->slug],
         ];
     }

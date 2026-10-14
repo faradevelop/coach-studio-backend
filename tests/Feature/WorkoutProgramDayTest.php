@@ -1,5 +1,4 @@
 <?php
-
 namespace Tests\Feature;
 
 use App\Models\Exercise;
@@ -25,11 +24,11 @@ class WorkoutProgramDayTest extends TestCase
     {
         return ProgramExercise::create([
             'workout_program_id' => $program->id,
-            'day' => $day,
-            'order_index' => $order,
-            'sets' => '3',
-            'rest' => $label,
-            'training_system' => 'normal',
+            'day'                => $day,
+            'order_index'        => $order,
+            'sets'               => '3',
+            'rest'               => $label,
+            'training_system'    => 'normal',
         ]);
     }
 
@@ -40,7 +39,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_add_day_increments_days_per_week(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 3);
         Sanctum::actingAs($coach);
 
@@ -53,7 +52,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_add_day_is_rejected_past_the_maximum(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 7);
         Sanctum::actingAs($coach);
 
@@ -63,7 +62,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_delete_day_removes_its_exercises_and_shifts_later_days(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 4);
         $this->pe($program, 1, 1, 'D1');
         $doomed = $this->pe($program, 2, 1, 'D2a');
@@ -74,10 +73,10 @@ class WorkoutProgramDayTest extends TestCase
 
         ProgramExerciseItem::create([
             'program_exercise_id' => $doomed->id,
-            'exercise_id' => Exercise::factory()->create()->id,
-            'order_index' => 1,
-            'reps' => ['10'],
-            'tempo' => '-',
+            'exercise_id'         => Exercise::factory()->create()->id,
+            'order_index'         => 1,
+            'reps'                => ['10'],
+            'tempo'               => '-',
         ]);
 
         Sanctum::actingAs($coach);
@@ -102,7 +101,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_delete_last_day_needs_no_shift(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 2);
         $this->pe($program, 1, 1, 'D1');
         $this->pe($program, 2, 1, 'D2');
@@ -117,7 +116,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_cannot_delete_the_only_day(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 1);
         $this->pe($program, 1, 1, 'D1');
         Sanctum::actingAs($coach);
@@ -130,7 +129,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_delete_nonexistent_day_returns_404(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 3);
         Sanctum::actingAs($coach);
 
@@ -139,7 +138,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_reorder_day_down_updates_all_exercise_days(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 3);
         $this->pe($program, 1, 1, 'D1a');
         $this->pe($program, 1, 2, 'D1b');
@@ -162,7 +161,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_reorder_day_up_updates_all_exercise_days(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 3);
         $this->pe($program, 1, 1, 'D1');
         $this->pe($program, 2, 1, 'D2');
@@ -179,7 +178,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_reorder_swapping_adjacent_days_does_not_violate_unique_constraint(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 2);
         $this->pe($program, 1, 1, 'D1');
         $this->pe($program, 2, 1, 'D2'); // same order_index on purpose
@@ -193,7 +192,7 @@ class WorkoutProgramDayTest extends TestCase
 
     public function test_reorder_rejects_out_of_range_target(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $program = $this->program($coach, 3);
         Sanctum::actingAs($coach);
 
@@ -201,11 +200,11 @@ class WorkoutProgramDayTest extends TestCase
         $this->patchJson("/api/v1/workout-programs/{$program->id}/days/1/reorder", [])->assertStatus(422);
     }
 
-    public function test_coach_cannot_modify_days_of_another_coachs_program(): void
+    public function test_coach_cannot_modify_days_of_another_coaches_program(): void
     {
-        $owner = User::factory()->create();
+        $owner    = User::factory()->create();
         $intruder = User::factory()->create();
-        $program = $this->program($owner, 3);
+        $program  = $this->program($owner, 3);
         Sanctum::actingAs($intruder);
 
         $this->postJson("/api/v1/workout-programs/{$program->id}/days")->assertStatus(404);
@@ -215,14 +214,13 @@ class WorkoutProgramDayTest extends TestCase
         $this->assertSame(3, $program->fresh()->days_per_week);
     }
 
-    public function test_admin_can_modify_days_of_any_program(): void
+    public function test_admin_cannot_modify_days_of_any_program(): void
     {
-        $owner = User::factory()->create();
+        $owner   = User::factory()->create();
         $program = $this->program($owner, 3);
         Sanctum::actingAs(User::factory()->admin()->create());
 
-        $this->postJson("/api/v1/workout-programs/{$program->id}/days")->assertStatus(201);
-        $this->assertSame(4, $program->fresh()->days_per_week);
+        $this->postJson("/api/v1/workout-programs/{$program->id}/days")->assertStatus(403);
     }
 
     public function test_unauthenticated_requests_are_rejected(): void

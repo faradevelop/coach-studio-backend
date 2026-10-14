@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\Models\Athlete;
@@ -17,38 +16,20 @@ class AthleteService
     public function __construct(private readonly WorkoutProgramService $programs) {}
 
     /**
-     * Decides which coach will own a new athlete.
-     * - Coach: always themselves; naming another coach is forbidden (403).
-     * - Admin: MUST name a valid, active coach; the admin never becomes the owner.
+     * Only coaches own athletes, and only themselves. Naming another coach is
+     * forbidden (403). Admins never reach this (route middleware + Policy).
      */
     public function resolveCoach(User $actor, ?string $requestedCoachId): User
     {
-        if (!$actor->isAdmin()) {
-            if ($requestedCoachId !== null && $requestedCoachId !== $actor->id) {
-                throw new AuthorizationException('You cannot create an athlete for another coach.');
-            }
-
-            return $actor;
+        if (! $actor->isCoach()) {
+            throw new AuthorizationException('Only coaches can create athletes.');
         }
 
-        if ($requestedCoachId === null) {
-            throw ValidationException::withMessages([
-                'coachId' => ['An admin must select the coach who will own the athlete.'],
-            ]);
+        if ($requestedCoachId !== null && $requestedCoachId !== $actor->id) {
+            throw new AuthorizationException('You cannot create an athlete for another coach.');
         }
 
-        $coach = User::where('id', $requestedCoachId)
-            ->where('role', 'coach')
-            ->where('is_active', true)
-            ->first();
-
-        if (!$coach) {
-            throw ValidationException::withMessages([
-                'coachId' => ['The selected coach is invalid.'],
-            ]);
-        }
-
-        return $coach;
+        return $actor;
     }
 
     public function create(User $coach, array $attributes): Athlete

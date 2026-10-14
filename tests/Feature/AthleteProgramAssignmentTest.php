@@ -100,19 +100,7 @@ class AthleteProgramAssignmentTest extends TestCase
             ->assertJsonPath('data.program.title', 'Ali - Cut');
     }
 
-    public function test_admin_assignment_is_owned_by_the_athletes_coach(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $coach = User::factory()->create();
-        $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $source = $this->programWithExercise($coach);
-        Sanctum::actingAs($admin);
 
-        $response = $this->assign($athlete, $source)->assertStatus(201);
-
-        $this->assertSame($coach->id, WorkoutProgram::findOrFail($response->json('data.programId'))->user_id);
-        $this->assertSame($admin->id, AthleteProgramAssignment::firstOrFail()->assigned_by);
-    }
 
     public function test_changing_program_ends_previous_assignment_and_keeps_one_current(): void
     {

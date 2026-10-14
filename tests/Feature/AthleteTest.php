@@ -69,46 +69,9 @@ class AthleteTest extends TestCase
         $this->assertSame(0, Athlete::count());
     }
 
-    public function test_admin_can_create_athlete_for_selected_coach(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $coach = User::factory()->create();
-        Sanctum::actingAs($admin);
 
-        $this->postJson('/api/v1/athletes', $this->payload(['coachId' => $coach->id]))
-            ->assertStatus(201)
-            ->assertJsonPath('data.coachId', $coach->id);
 
-        $this->assertDatabaseHas('athletes', ['coach_id' => $coach->id]);
-        $this->assertDatabaseMissing('athletes', ['coach_id' => $admin->id]);
-    }
 
-    public function test_admin_cannot_create_athlete_without_a_coach(): void
-    {
-        $admin = User::factory()->admin()->create();
-        Sanctum::actingAs($admin);
-
-        $this->postJson('/api/v1/athletes', $this->payload())
-            ->assertStatus(422)
-            ->assertJsonPath('success', false)
-            ->assertJsonStructure(['errors' => ['coachId']]);
-
-        $this->assertSame(0, Athlete::count());
-    }
-
-    public function test_admin_cannot_use_an_invalid_coach(): void
-    {
-        $admin         = User::factory()->admin()->create();
-        $otherAdmin    = User::factory()->admin()->create();
-        $inactiveCoach = User::factory()->inactive()->create();
-        Sanctum::actingAs($admin);
-
-        foreach ([(string) Str::uuid(), $otherAdmin->id, $admin->id, $inactiveCoach->id] as $invalid) {
-            $this->postJson('/api/v1/athletes', $this->payload(['coachId' => $invalid]))->assertStatus(422);
-        }
-
-        $this->assertSame(0, Athlete::count());
-    }
 
     public function test_athlete_validation(): void
     {
@@ -165,13 +128,6 @@ class AthleteTest extends TestCase
         $this->assertNull($athlete->fresh()->archived_at);
     }
 
-    public function test_admin_can_access_any_athlete(): void
-    {
-        $athlete = Athlete::factory()->create();
-        Sanctum::actingAs(User::factory()->admin()->create());
-
-        $this->getJson("/api/v1/athletes/{$athlete->id}")->assertOk()->assertJsonPath('data.id', $athlete->id);
-    }
 
     // ----------------------------------------------------------------- update
 
@@ -250,13 +206,7 @@ class AthleteTest extends TestCase
         $this->getJson('/api/v1/athletes?status=bogus')->assertStatus(422);
     }
 
-    public function test_admin_list_includes_all_coaches(): void
-    {
-        Athlete::factory()->count(3)->create();
-        Sanctum::actingAs(User::factory()->admin()->create());
 
-        $this->assertCount(3, $this->getJson('/api/v1/athletes')->json('data'));
-    }
 
     public function test_search_by_name_phone_email_and_persian_digits(): void
     {
