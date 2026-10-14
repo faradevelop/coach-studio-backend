@@ -29,7 +29,7 @@ class WorkoutProgramService
                 'level' => $original->level,
                 'days_per_week' => $original->days_per_week,
                 'notes' => $original->notes,
-                'is_template' => $original->is_template,
+                'is_template' => true,
             ]);
 
             foreach ($original->programExercises as $programExercise) {
