@@ -20,7 +20,7 @@ class WorkoutProgramService
     {
         return DB::transaction(function () use ($workoutProgramId, $requestedTitle, $ownerId) {
             $original = WorkoutProgram::with('programExercises.items')->findOrFail($workoutProgramId);
-            $title = $this->resolveTitle($requestedTitle, $original->title);
+            $title = $this->resolveTitle($requestedTitle, $original->title, $ownerId);
 
             $copy = WorkoutProgram::create([
                 'user_id' => $ownerId, // NEW — the copy always belongs to whoever requested it
@@ -77,7 +77,7 @@ class WorkoutProgramService
     //     return $trimmed !== '' ? $trimmed : "{$originalTitle} (Copy)";
     // }
 
-    private function resolveTitle(?string $requestedTitle, string $originalTitle): string
+    private function resolveTitle(?string $requestedTitle, string $originalTitle, string $ownerId): string
     {
         $trimmed = trim((string) $requestedTitle);
 
@@ -88,6 +88,7 @@ class WorkoutProgramService
         $baseTitle = preg_replace('/ \(Copy(?: \d+)?\)$/', '', $originalTitle);
 
         $existingTitles = WorkoutProgram::query()
+            ->where('user_id', $ownerId)
             ->where('title', 'like', "{$baseTitle}%")
             ->pluck('title');
 

@@ -25,7 +25,6 @@ class StoreWorkoutProgramRequest extends FormRequest
             ])],
             'daysPerWeek' => ['required', 'integer', 'min:1', 'max:255'],
             'notes' => ['nullable', 'string'],
-            'isTemplate' => ['sometimes', 'boolean'],
         ];
     }
 }

@@ -1,5 +1,4 @@
 <?php
-
 namespace Tests\Feature;
 
 use App\Models\Athlete;
@@ -20,26 +19,26 @@ class AthleteProgramAssignmentTest extends TestCase
     private function programWithExercise(User $owner, string $title = 'Source'): WorkoutProgram
     {
         $program = WorkoutProgram::factory()->for($owner)->create([
-            'title' => $title,
+            'title'         => $title,
             'days_per_week' => 2,
-            'notes' => 'original notes',
+            'notes'         => 'original notes',
         ]);
 
         $pe = ProgramExercise::create([
             'workout_program_id' => $program->id,
-            'day' => 1,
-            'order_index' => 1,
-            'sets' => '3',
-            'rest' => '30',
-            'training_system' => 'normal',
+            'day'                => 1,
+            'order_index'        => 1,
+            'sets'               => '3',
+            'rest'               => '30',
+            'training_system'    => 'normal',
         ]);
 
         ProgramExerciseItem::create([
             'program_exercise_id' => $pe->id,
-            'exercise_id' => Exercise::factory()->create()->id,
-            'order_index' => 1,
-            'reps' => ['10', '10', '8'],
-            'tempo' => '-',
+            'exercise_id'         => Exercise::factory()->create()->id,
+            'order_index'         => 1,
+            'reps'                => ['10', '10', '8'],
+            'tempo'               => '-',
         ]);
 
         return $program;
@@ -52,10 +51,10 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_coach_can_assign_program_and_source_is_cloned_not_mutated(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $source = $this->programWithExercise($coach);
-        $before = $source->fresh()->only(['user_id', 'title', 'goal', 'level', 'days_per_week', 'notes', 'is_template']);
+        $source  = $this->programWithExercise($coach);
+        $before  = $source->fresh()->only(['user_id', 'title', 'goal', 'level', 'days_per_week', 'notes', 'is_template']);
         Sanctum::actingAs($coach);
 
         $response = $this->assign($athlete, $source)
@@ -90,9 +89,9 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_title_can_be_overridden(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $source = $this->programWithExercise($coach);
+        $source  = $this->programWithExercise($coach);
         Sanctum::actingAs($coach);
 
         $this->assign($athlete, $source, ['title' => 'Ali - Cut'])
@@ -100,14 +99,12 @@ class AthleteProgramAssignmentTest extends TestCase
             ->assertJsonPath('data.program.title', 'Ali - Cut');
     }
 
-
-
     public function test_changing_program_ends_previous_assignment_and_keeps_one_current(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $a = $this->programWithExercise($coach, 'A');
-        $b = $this->programWithExercise($coach, 'B');
+        $a       = $this->programWithExercise($coach, 'A');
+        $b       = $this->programWithExercise($coach, 'B');
         Sanctum::actingAs($coach);
 
         $first = $this->assign($athlete, $a)->assertStatus(201);
@@ -131,10 +128,10 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_program_history_lists_current_first_then_previous(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $a = $this->programWithExercise($coach, 'A');
-        $b = $this->programWithExercise($coach, 'B');
+        $a       = $this->programWithExercise($coach, 'A');
+        $b       = $this->programWithExercise($coach, 'B');
         Sanctum::actingAs($coach);
 
         $this->assign($athlete, $a)->assertStatus(201);
@@ -155,9 +152,9 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_archived_athlete_cannot_receive_a_program(): void
     {
-        $coach = User::factory()->create();
-        $athlete = Athlete::factory()->archived()->create(['coach_id' => $coach->id]);
-        $source = $this->programWithExercise($coach);
+        $coach          = User::factory()->create();
+        $athlete        = Athlete::factory()->archived()->create(['coach_id' => $coach->id]);
+        $source         = $this->programWithExercise($coach);
         $programsBefore = WorkoutProgram::count();
         Sanctum::actingAs($coach);
 
@@ -169,9 +166,9 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_restoring_allows_assignment_again(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $source = $this->programWithExercise($coach);
+        $source  = $this->programWithExercise($coach);
         Sanctum::actingAs($coach);
 
         $this->postJson("/api/v1/athletes/{$athlete->id}/archive")->assertOk();
@@ -182,10 +179,10 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_coach_cannot_assign_to_another_coachs_athlete(): void
     {
-        $owner = User::factory()->create();
+        $owner    = User::factory()->create();
         $intruder = User::factory()->create();
-        $athlete = Athlete::factory()->create(['coach_id' => $owner->id]);
-        $source = $this->programWithExercise($intruder);
+        $athlete  = Athlete::factory()->create(['coach_id' => $owner->id]);
+        $source   = $this->programWithExercise($intruder);
         Sanctum::actingAs($intruder);
 
         $this->assign($athlete, $source)->assertStatus(404);
@@ -194,9 +191,9 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_coach_cannot_assign_another_coachs_program(): void
     {
-        $coach = User::factory()->create();
-        $other = User::factory()->create();
-        $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
+        $coach          = User::factory()->create();
+        $other          = User::factory()->create();
+        $athlete        = Athlete::factory()->create(['coach_id' => $coach->id]);
         $foreignProgram = $this->programWithExercise($other);
         Sanctum::actingAs($coach);
 
@@ -206,7 +203,7 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_assign_validation(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
         Sanctum::actingAs($coach);
 
@@ -214,18 +211,19 @@ class AthleteProgramAssignmentTest extends TestCase
         $this->postJson("/api/v1/athletes/{$athlete->id}/program-assignments", ['sourceProgramId' => 'nope'])->assertStatus(422);
     }
 
-    public function test_athlete_copies_are_hidden_from_the_program_list_and_cannot_be_deleted(): void
+    public function test_athlete_copies_are_listed_with_status_but_cannot_be_deleted(): void
     {
-        $coach = User::factory()->create();
+        $coach   = User::factory()->create();
         $athlete = Athlete::factory()->create(['coach_id' => $coach->id]);
-        $source = $this->programWithExercise($coach);
+        $source  = $this->programWithExercise($coach);
         Sanctum::actingAs($coach);
 
         $copyId = $this->assign($athlete, $source)->json('data.programId');
 
-        $ids = array_column($this->getJson('/api/v1/workout-programs')->json('data'), 'id');
-        $this->assertContains($source->id, $ids);
-        $this->assertNotContains($copyId, $ids);
+        $list = collect($this->getJson('/api/v1/workout-programs')->json('data'))->keyBy('id');
+        $this->assertSame('template', $list[$source->id]['status']);
+        $this->assertSame('assigned', $list[$copyId]['status']);
+        $this->assertSame($athlete->id, $list[$copyId]['athleteId']);
 
         $this->deleteJson("/api/v1/workout-programs/{$copyId}")->assertStatus(422);
         $this->assertDatabaseHas('workout_programs', ['id' => $copyId]);
@@ -239,7 +237,7 @@ class AthleteProgramAssignmentTest extends TestCase
 
     public function test_public_duplicate_behaviour_is_unchanged(): void
     {
-        $coach = User::factory()->create();
+        $coach  = User::factory()->create();
         $source = $this->programWithExercise($coach, 'Plan');
         Sanctum::actingAs($coach);
 

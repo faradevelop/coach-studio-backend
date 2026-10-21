@@ -26,7 +26,6 @@ class UpdateWorkoutProgramRequest extends FormRequest
             // pre-filled original value — kept required to match that behavior.
             'daysPerWeek' => ['required', 'integer', 'min:1', 'max:255'],
             'notes' => ['nullable', 'string'],
-            'isTemplate' => ['sometimes', 'boolean'],
         ];
     }
 }

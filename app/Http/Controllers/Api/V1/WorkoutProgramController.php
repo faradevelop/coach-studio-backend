@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -19,9 +20,11 @@ class WorkoutProgramController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        // Athlete-specific clones are reached through the athlete, not the coach's own list.
+        // All programs of the coach: drafts (templates) AND athlete-assigned copies.
+        // The assignment + athlete are eager-loaded so the resource can expose
+        // the status label and the athlete's info without N+1 queries.
         $programs = $this->scopedQuery($request)
-            ->whereDoesntHave('athleteAssignment')
+            ->with('athleteAssignment.athlete')
             ->orderBy('title')
             ->get();
 
@@ -30,7 +33,7 @@ class WorkoutProgramController extends Controller
 
     public function show(Request $request, string $id): JsonResponse
     {
-        $program = $this->scopedQuery($request)->with('athleteAssignment')->findOrFail($id);
+        $program = $this->scopedQuery($request)->with('athleteAssignment.athlete')->findOrFail($id);
         $this->authorize('view', $program);
 
         return ApiResponse::success(new WorkoutProgramResource($program));
@@ -48,7 +51,7 @@ class WorkoutProgramController extends Controller
             'level' => $data['level'],
             'days_per_week' => $data['daysPerWeek'],
             'notes' => $data['notes'] ?? null,
-            'is_template' => $data['isTemplate'] ?? true,
+            'is_template' => true, // a coach-created program is always a draft
         ]);
 
         return ApiResponse::success(new WorkoutProgramResource($program), 'Workout program created', 201);
@@ -61,16 +64,20 @@ class WorkoutProgramController extends Controller
         $this->authorize('update', $program);
         $data = $request->validated();
 
+        // is_template is intentionally NOT editable: it is false only for athlete
+        // copies, and that is decided exclusively by the assign flow.
         $program->update([
             'title' => $data['title'],
             'goal' => $data['goal'],
             'level' => $data['level'],
             'days_per_week' => $data['daysPerWeek'],
             'notes' => $data['notes'] ?? null,
-            'is_template' => $data['isTemplate'] ?? $program->is_template,
         ]);
 
-        return ApiResponse::success(new WorkoutProgramResource($program), 'Workout program updated');
+        return ApiResponse::success(
+            new WorkoutProgramResource($program->load('athleteAssignment.athlete')),
+            'Workout program updated'
+        );
     }
 
     public function destroy(Request $request, string $id): JsonResponse
@@ -103,6 +110,12 @@ class WorkoutProgramController extends Controller
 
     private function scopedQuery(Request $request)
     {
-        return WorkoutProgram::query()->where('user_id', $request->user()->id);
+        $query = WorkoutProgram::query();
+
+        if (!$request->user()->isAdmin()) {
+            $query->where('user_id', $request->user()->id);
+        }
+
+        return $query;
     }
 }
