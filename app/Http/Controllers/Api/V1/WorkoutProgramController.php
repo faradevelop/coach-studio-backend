@@ -1,9 +1,9 @@
 <?php
-
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\WorkoutProgram\DuplicateWorkoutProgramRequest;
+use App\Http\Requests\WorkoutProgram\ListWorkoutProgramsRequest;
 use App\Http\Requests\WorkoutProgram\StoreWorkoutProgramRequest;
 use App\Http\Requests\WorkoutProgram\UpdateWorkoutProgramRequest;
 use App\Http\Resources\WorkoutProgramResource;
@@ -16,14 +16,14 @@ use Illuminate\Validation\ValidationException;
 
 class WorkoutProgramController extends Controller
 {
-    public function __construct(private readonly WorkoutProgramService $service) {}
-
-    public function index(Request $request): JsonResponse
+    public function __construct(private readonly WorkoutProgramService $service)
+    {}
+    public function index(ListWorkoutProgramsRequest $request): JsonResponse
     {
-        // All programs of the coach: drafts (templates) AND athlete-assigned copies.
-        // The assignment + athlete are eager-loaded so the resource can expose
-        // the status label and the athlete's info without N+1 queries.
-        $programs = $this->scopedQuery($request)
+        // All programs of the coach: drafts (templates) AND athlete-assigned copies,
+        // optionally narrowed by search / status / goal / level.
+        $programs = $this->service
+            ->applyListFilters($this->scopedQuery($request), $request->validated())
             ->with('athleteAssignment.athlete')
             ->orderBy('title')
             ->get();
@@ -45,13 +45,13 @@ class WorkoutProgramController extends Controller
         $data = $request->validated();
 
         $program = WorkoutProgram::create([
-            'user_id' => $request->user()->id, // never accepted from the client
-            'title' => $data['title'],
-            'goal' => $data['goal'],
-            'level' => $data['level'],
+            'user_id'       => $request->user()->id, // never accepted from the client
+            'title'         => $data['title'],
+            'goal'          => $data['goal'],
+            'level'         => $data['level'],
             'days_per_week' => $data['daysPerWeek'],
-            'notes' => $data['notes'] ?? null,
-            'is_template' => true, // a coach-created program is always a draft
+            'notes'         => $data['notes'] ?? null,
+            'is_template'   => true, // a coach-created program is always a draft
         ]);
 
         return ApiResponse::success(new WorkoutProgramResource($program), 'Workout program created', 201);
@@ -67,11 +67,11 @@ class WorkoutProgramController extends Controller
         // is_template is intentionally NOT editable: it is false only for athlete
         // copies, and that is decided exclusively by the assign flow.
         $program->update([
-            'title' => $data['title'],
-            'goal' => $data['goal'],
-            'level' => $data['level'],
+            'title'         => $data['title'],
+            'goal'          => $data['goal'],
+            'level'         => $data['level'],
             'days_per_week' => $data['daysPerWeek'],
-            'notes' => $data['notes'] ?? null,
+            'notes'         => $data['notes'] ?? null,
         ]);
 
         return ApiResponse::success(
@@ -112,7 +112,7 @@ class WorkoutProgramController extends Controller
     {
         $query = WorkoutProgram::query();
 
-        if (!$request->user()->isAdmin()) {
+        if (! $request->user()->isAdmin()) {
             $query->where('user_id', $request->user()->id);
         }
 
