@@ -20,7 +20,10 @@ class UserService
 
         $target->update([
             'username' => $data['username'],
-            'email' => $data['email'],
+            'first_name' => $data['firstName'],
+            'last_name' => $data['lastName'],
+            'phone' => $data['phone'],
+            'email' => $data['email'] ?? null, // optional: absent/blank clears it
             'role' => $newRole,
             'is_active' => $newIsActive,
         ]);

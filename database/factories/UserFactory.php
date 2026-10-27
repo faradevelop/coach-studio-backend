@@ -15,6 +15,9 @@ class UserFactory extends Factory
     {
         return [
             'username' => Str::slug($this->faker->unique()->userName()),
+            'first_name' => $this->faker->firstName(),
+            'last_name' => $this->faker->lastName(),
+            'phone' => $this->faker->numerify('09#########'),
             'email' => $this->faker->unique()->safeEmail(),
             'password' => Hash::make('password123'),
             'role' => 'coach',

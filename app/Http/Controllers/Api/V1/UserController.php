@@ -38,7 +38,10 @@ class UserController extends Controller
 
         $user = User::create([
             'username' => $data['username'],
-            'email' => $data['email'],
+            'first_name' => $data['firstName'],
+            'last_name' => $data['lastName'],
+            'phone' => $data['phone'],
+            'email' => $data['email'] ?? null,
             'password' => Hash::make($data['password']),
             'role' => $data['role'],
             'is_active' => $data['isActive'] ?? true,

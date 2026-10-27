@@ -12,7 +12,10 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'username' => $this->username,
-            'email' => $this->email,
+            'firstName' => $this->first_name,
+            'lastName' => $this->last_name,
+            'phone' => $this->phone,
+            'email' => $this->email, // nullable
             'role' => $this->role,
             'isActive' => (bool) $this->is_active,
             'createdAt' => $this->created_at?->toIso8601String(),
