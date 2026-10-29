@@ -129,4 +129,28 @@ class PasswordResetTest extends TestCase
             'password_confirmation' => 'secondnewpass123',
         ])->assertStatus(422);
     }
+
+    public function test_reset_link_points_to_the_matching_flutter_web_app(): void
+    {
+        config(['app.frontend_url' => 'https://app.faracodes.ir']);
+        Notification::fake();
+        $coach = User::factory()->create(['email' => 'c@example.com']);
+        $admin = User::factory()->admin()->create(['email' => 'a@example.com']);
+
+        $this->postJson('/api/v1/auth/forgot-password', ['email' => 'c@example.com'])->assertOk();
+        $this->postJson('/api/v1/auth/forgot-password', ['email' => 'a@example.com'])->assertOk();
+
+        Notification::assertSentTo($coach, ResetPassword::class, function ($n) use ($coach) {
+            return str_starts_with(
+                $n->toMail($coach)->actionUrl,
+                'https://app.faracodes.ir/coach/reset-password?token='
+            );
+        });
+        Notification::assertSentTo($admin, ResetPassword::class, function ($n) use ($admin) {
+            return str_starts_with(
+                $n->toMail($admin)->actionUrl,
+                'https://app.faracodes.ir/admin/reset-password?token='
+            );
+        });
+    }
 }

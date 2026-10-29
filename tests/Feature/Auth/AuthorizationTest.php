@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature\Auth;
 
 use App\Models\Exercise;
@@ -127,8 +128,8 @@ class AuthorizationTest extends TestCase
         return [
             'name'        => 'Squat',
             'type'        => 'strength',
-            'difficulty'  => 'Beginner',
-            'equipment'   => 'Barbell',
+            'difficulty'  => 'beginner',
+            'equipment'   => 'barbell',
             'muscleSlugs' => [$muscle->slug],
         ];
     }

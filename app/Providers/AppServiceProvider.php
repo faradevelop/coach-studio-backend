@@ -67,17 +67,18 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(30)->by('admin-writes:' . ($request->user()?->id ?: $request->ip()))
         );
 
-        // No frontend reset page exists yet. This builds a placeholder URL so
-        // Password::sendResetLink() doesn't fail trying to resolve a
-        // non-existent 'password.reset' web route. With MAIL_MAILER=log, the
-        // token is readable directly in storage/logs/laravel.log for testing.
-        // Replace with a real deep link once a reset UI exists.
         ResetPassword::createUrlUsing(function ($notifiable, string $token) {
+            // Each role has its own Flutter Web app: /coach or /admin.
+            $app = $notifiable->isAdmin() ? 'admin' : 'coach';
+
             return sprintf(
-                '%s/reset-password?token=%s&email=%s',
-                config('app.url'),
-                $token,
-                urlencode($notifiable->getEmailForPasswordReset()),
+                '%s/%s/reset-password?%s',
+                rtrim((string) config('app.frontend_url'), '/'),
+                $app,
+                http_build_query([
+                    'token' => $token,
+                    'email' => $notifiable->getEmailForPasswordReset(),
+                ])
             );
         });
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\User;
@@ -68,7 +69,11 @@ class AuthService
         // Externally identical response either way — but the actual reset
         // link is only ever generated/sent for an existing, active account.
         if ($user && $user->is_active) {
-            Password::sendResetLink(['email' => $email]);
+            try {
+                Password::sendResetLink(['email' => $email]);
+            } catch (\Throwable $e) {
+                report($e); // never leak mail failures (or account existence) to the client
+            }
         }
     }
 
