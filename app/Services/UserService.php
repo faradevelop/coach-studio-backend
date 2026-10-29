@@ -3,46 +3,72 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UserService
 {
     public function update(User $actor, User $target, array $data): User
     {
-        $newRole = $data['role'] ?? $target->role;
-        $newIsActive = $data['isActive'] ?? $target->is_active;
+        return DB::transaction(function () use ($actor, $target, $data) {
+            $admins = $this->lockAdmins();
+            $target = User::whereKey($target->id)->lockForUpdate()->firstOrFail();
 
-        if ($actor->id === $target->id) {
-            $this->guardSelfChange($newRole, $newIsActive);
-        }
+            $newRole = $data['role'] ?? $target->role;
+            $newIsActive = $data['isActive'] ?? $target->is_active;
 
-        $this->guardAdminInvariant($target, $newRole, $newIsActive);
+            if ($actor->id === $target->id) {
+                $this->guardSelfChange($newRole, $newIsActive);
+            }
 
-        $target->update([
-            'username' => $data['username'],
-            'first_name' => $data['firstName'],
-            'last_name' => $data['lastName'],
-            'phone' => $data['phone'],
-            'email' => $data['email'] ?? null, // optional: absent/blank clears it
-            'role' => $newRole,
-            'is_active' => $newIsActive,
-        ]);
+            $this->guardAdminInvariant($admins, $target, $newRole, $newIsActive);
 
-        return $target->fresh();
+            $wasActive = (bool) $target->is_active;
+
+            $target->update([
+                'username' => $data['username'],
+                'first_name' => $data['firstName'],
+                'last_name' => $data['lastName'],
+                'phone' => $data['phone'],
+                'email' => $data['email'] ?? null, // optional: absent/blank clears it
+                'role' => $newRole,
+                'is_active' => $newIsActive,
+            ]);
+
+            // Deactivation by ANY route must cut access immediately.
+            // Re-activation does not bring old tokens back: they are gone.
+            if ($wasActive && ! $newIsActive) {
+                $target->tokens()->delete();
+            }
+
+            return $target->fresh();
+        });
     }
 
     public function deactivate(User $actor, User $target): void
     {
-        if ($actor->id === $target->id) {
-            throw ValidationException::withMessages([
-                'user' => ['You cannot deactivate your own account.'],
-            ]);
-        }
+        DB::transaction(function () use ($actor, $target) {
+            $admins = $this->lockAdmins();
+            $target = User::whereKey($target->id)->lockForUpdate()->firstOrFail();
 
-        $this->guardAdminInvariant($target, $target->role, false);
+            if ($actor->id === $target->id) {
+                throw ValidationException::withMessages([
+                    'user' => ['You cannot deactivate your own account.'],
+                ]);
+            }
 
-        $target->update(['is_active' => false]); // account deactivation — not a soft delete
-        $target->tokens()->delete();
+            $this->guardAdminInvariant($admins, $target, $target->role, false);
+
+            $target->update(['is_active' => false]); // account deactivation — not a soft delete
+            $target->tokens()->delete();
+        });
+    }
+
+    /** Always lock the admin set first, in id order (prevents deadlocks). */
+    private function lockAdmins(): Collection
+    {
+        return User::where('role', 'admin')->orderBy('id')->lockForUpdate()->get();
     }
 
     private function guardSelfChange(string $newRole, bool $newIsActive): void
@@ -61,19 +87,16 @@ class UserService
     }
 
     /**
-     * Enforces: the system must always retain at least one active admin.
-     * Only relevant when the target is CURRENTLY an active admin and the
-     * requested change would remove that status.
+     * The system must always retain at least one active admin.
+     * $admins was read under lock, so the count cannot race.
      */
-    private function guardAdminInvariant(User $target, string $resultingRole, bool $resultingActive): void
+    private function guardAdminInvariant(Collection $admins, User $target, string $resultingRole, bool $resultingActive): void
     {
         $wasActiveAdmin = $target->role === 'admin' && $target->is_active;
         $willRemainActiveAdmin = $resultingRole === 'admin' && $resultingActive;
 
         if ($wasActiveAdmin && !$willRemainActiveAdmin) {
-            $activeAdminCount = User::where('role', 'admin')->where('is_active', true)->count();
-
-            if ($activeAdminCount <= 1) {
+            if ($admins->where('is_active', true)->count() <= 1) {
                 throw ValidationException::withMessages([
                     'role' => ['The last active admin cannot be demoted or deactivated.'],
                 ]);

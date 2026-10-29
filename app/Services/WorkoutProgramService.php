@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\ProgramExercise;
@@ -7,6 +8,7 @@ use App\Models\WorkoutProgram;
 use App\Support\TextNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WorkoutProgramService
 {
@@ -39,21 +41,48 @@ class WorkoutProgramService
 
         if ($term !== null && $term !== '') {
             foreach (explode(' ', $term) as $token) {
-                $like = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $token) . '%';
+                $patterns = TextNormalizer::likePatterns($token);
+                $like = $patterns[0]; // Latin-digit form, used for athlete names
 
-                $query->where(function (Builder $q) use ($like) {
-                    $q->whereRaw("workout_programs.title LIKE ? ESCAPE '!'", [$like])
-                        ->orWhereHas('athleteAssignment.athlete', function (Builder $a) use ($like) {
-                            $a->where(function (Builder $n) use ($like) {
-                                $n->whereRaw("first_name LIKE ? ESCAPE '!'", [$like])
-                                    ->orWhereRaw("last_name LIKE ? ESCAPE '!'", [$like]);
-                            });
+                $query->where(function (Builder $q) use ($patterns, $like) {
+                    foreach ($patterns as $pattern) {
+                        $q->orWhereRaw("workout_programs.title LIKE ? ESCAPE '!'", [$pattern]);
+                    }
+
+                    $q->orWhereHas('athleteAssignment.athlete', function (Builder $a) use ($like) {
+                        $a->where(function (Builder $n) use ($like) {
+                            $n->whereRaw("first_name LIKE ? ESCAPE '!'", [$like])
+                                ->orWhereRaw("last_name LIKE ? ESCAPE '!'", [$like]);
                         });
+                    });
                 });
             }
         }
 
         return $query;
+    }
+
+    /**
+     * Updates a program under a row lock. Lowering daysPerWeek below a day that
+     * still has exercises is refused (422) — nothing is silently deleted.
+     */
+    public function update(WorkoutProgram $program, array $attributes): WorkoutProgram
+    {
+        return DB::transaction(function () use ($program, $attributes) {
+            $locked = WorkoutProgram::whereKey($program->id)->lockForUpdate()->firstOrFail();
+
+            $maxUsedDay = (int) ProgramExercise::where('workout_program_id', $locked->id)->max('day');
+
+            if ((int) $attributes['days_per_week'] < $maxUsedDay) {
+                throw ValidationException::withMessages([
+                    'daysPerWeek' => ["Day {$maxUsedDay} still has exercises. Remove them (or that day) before lowering the number of days."],
+                ]);
+            }
+
+            $locked->update($attributes);
+
+            return $locked->fresh();
+        });
     }
 
     /**
@@ -66,6 +95,8 @@ class WorkoutProgramService
     public function duplicate(string $workoutProgramId, ?string $requestedTitle, string $ownerId): WorkoutProgram
     {
         return DB::transaction(function () use ($workoutProgramId, $requestedTitle, $ownerId) {
+            // Same row lock the write services take: waits for in-flight edits.
+            WorkoutProgram::whereKey($workoutProgramId)->lockForUpdate()->firstOrFail();
             $original = WorkoutProgram::with('programExercises.items')->findOrFail($workoutProgramId);
             $title    = $this->resolveTitle($requestedTitle, $original->title, $ownerId);
 
@@ -96,6 +127,7 @@ class WorkoutProgramService
     public function cloneForAthlete(WorkoutProgram $source, string $ownerId, ?string $title = null): WorkoutProgram
     {
         return DB::transaction(function () use ($source, $ownerId, $title) {
+            WorkoutProgram::whereKey($source->id)->lockForUpdate()->firstOrFail();
             $original = WorkoutProgram::with('programExercises.items')->findOrFail($source->id);
             $trimmed  = trim((string) $title);
 
@@ -117,41 +149,33 @@ class WorkoutProgramService
         });
     }
 
-    // private function resolveTitle(?string $requestedTitle, string $originalTitle): string
-    // {
-    //     $trimmed = trim((string) $requestedTitle);
-
-    //     return $trimmed !== '' ? $trimmed : "{$originalTitle} (Copy)";
-    // }
 
     private function resolveTitle(?string $requestedTitle, string $originalTitle, string $ownerId): string
     {
         $trimmed = trim((string) $requestedTitle);
 
         if ($trimmed !== '') {
-            return $trimmed;
+            return $trimmed; // length is validated by the request (max:255)
         }
 
-        $baseTitle = preg_replace('/ \(Copy(?: \d+)?\)$/', '', $originalTitle);
+        $baseTitle = preg_replace('/ \(Copy(?: \d+)?\)$/u', '', $originalTitle);
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $baseTitle);
 
         $existingTitles = WorkoutProgram::query()
             ->where('user_id', $ownerId)
-            ->where('title', 'like', "{$baseTitle}%")
+            ->where('title', 'like', "{$escaped}%")
             ->pluck('title');
 
-        $copyTitle = "{$baseTitle} (Copy)";
+        $number = 1;
 
-        if (! $existingTitles->contains($copyTitle)) {
-            return $copyTitle;
-        }
-
-        $number = 2;
-
-        while ($existingTitles->contains("{$baseTitle} (Copy {$number})")) {
+        do {
+            $suffix = $number === 1 ? ' (Copy)' : " (Copy {$number})";
+            // Truncate the base so the whole title always fits the 255-char column.
+            $candidate = mb_substr($baseTitle, 0, 255 - mb_strlen($suffix)) . $suffix;
             $number++;
-        }
+        } while ($existingTitles->contains($candidate));
 
-        return "{$baseTitle} (Copy {$number})";
+        return $candidate;
     }
 
     private function copyProgramExercise(ProgramExercise $original, string $newWorkoutProgramId): void

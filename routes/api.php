@@ -16,12 +16,10 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth');
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth');
 
-    Route::middleware('auth:sanctum')->group(function () {
-        // ── Any authenticated user ───────────────────────────────────────
+    Route::middleware(['auth:sanctum', 'active', 'throttle:api'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
-        Route::post('auth/change-password', [AuthController::class, 'changePassword']);
-
+        Route::post('auth/change-password', [AuthController::class, 'changePassword'])->middleware('throttle:sensitive');
         // Read-only reference data: the Exercise Bank is read by coaches and managed by admins.
         Route::get('exercises', [ExerciseController::class, 'index']);
         Route::get('exercises/{id}', [ExerciseController::class, 'show']);
@@ -35,9 +33,9 @@ Route::prefix('v1')->group(function () {
 
             // Coach management. `DELETE` deactivates (never hard-deletes).
             Route::get('users', [UserController::class, 'index']);
-            Route::post('users', [UserController::class, 'store']);
-            Route::put('users/{id}', [UserController::class, 'update']);
-            Route::delete('users/{id}', [UserController::class, 'destroy']);
+            Route::post('users', [UserController::class, 'store'])->middleware('throttle:admin-writes');
+            Route::put('users/{id}', [UserController::class, 'update'])->middleware('throttle:admin-writes');
+            Route::delete('users/{id}', [UserController::class, 'destroy'])->middleware('throttle:admin-writes');
         });
 
         // ── Coach only: own programs + own athletes ──────────────────────
@@ -52,8 +50,8 @@ Route::prefix('v1')->group(function () {
 
             // Days are implicit (1..days_per_week); ownership via the parent WorkoutProgram.
             Route::post('workout-programs/{id}/days', [WorkoutProgramDayController::class, 'store']);
-            Route::delete('workout-programs/{id}/days/{day}', [WorkoutProgramDayController::class, 'destroy'])->whereNumber('day');
-            Route::patch('workout-programs/{id}/days/{day}/reorder', [WorkoutProgramDayController::class, 'reorder'])->whereNumber('day');
+            Route::delete('workout-programs/{id}/days/{day}', [WorkoutProgramDayController::class, 'destroy'])->where('day', '[0-9]{1,2}');
+            Route::patch('workout-programs/{id}/days/{day}/reorder', [WorkoutProgramDayController::class, 'reorder'])->where('day', '[0-9]{1,2}');
 
             Route::get('workout-programs/{workoutProgramId}/program-exercises', [ProgramExerciseController::class, 'index']);
             Route::post('program-exercises', [ProgramExerciseController::class, 'store']);

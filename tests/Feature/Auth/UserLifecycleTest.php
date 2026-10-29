@@ -13,33 +13,47 @@ class UserLifecycleTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function newUserPayload(string $username, string $role): array
+    {
+        return [
+            'username' => $username,
+            'firstName' => 'Ali',
+            'lastName' => 'Rezaei',
+            'phone' => '09121234567',
+            'email' => "{$username}@example.com",
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => $role,
+        ];
+    }
+
     public function test_admin_can_create_a_coach(): void
     {
         Sanctum::actingAs(User::factory()->admin()->create());
 
-        $this->postJson('/api/v1/users', [
-            'username' => 'newcoach',
-            'email' => 'newcoach@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'role' => 'coach',
-        ])->assertStatus(201);
+        $this->postJson('/api/v1/users', $this->newUserPayload('newcoach', 'coach'))->assertStatus(201);
 
         $this->assertDatabaseHas('users', ['username' => 'newcoach', 'role' => 'coach']);
     }
 
-    public function test_admin_can_create_another_admin(): void
+        public function test_admin_cannot_demote_themselves(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
 
-        $this->postJson('/api/v1/users', [
-            'username' => 'newadmin',
-            'email' => 'newadmin@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'role' => 'admin',
-        ])->assertStatus(201);
+        // Full valid profile, so the 422 can only come from the "no self-demotion" rule.
+        $this->putJson("/api/v1/users/{$admin->id}", [
+            'username' => $admin->username,
+            'firstName' => $admin->first_name,
+            'lastName' => $admin->last_name,
+            'phone' => $admin->phone,
+            'email' => $admin->email,
+            'role' => 'coach',
+        ])->assertStatus(422)->assertJsonStructure(['errors' => ['role']]);
+
+        $this->assertEquals('admin', $admin->fresh()->role);
     }
+
 
     public function test_admin_can_deactivate_a_coach(): void
     {
@@ -80,20 +94,6 @@ class UserLifecycleTest extends TestCase
 
         $this->deleteJson("/api/v1/users/{$admin->id}")->assertStatus(422);
         $this->assertTrue($admin->fresh()->is_active);
-    }
-
-    public function test_admin_cannot_demote_themselves(): void
-    {
-        $admin = User::factory()->admin()->create();
-        Sanctum::actingAs($admin);
-
-        $this->putJson("/api/v1/users/{$admin->id}", [
-            'username' => $admin->username,
-            'email' => $admin->email,
-            'role' => 'coach',
-        ])->assertStatus(422);
-
-        $this->assertEquals('admin', $admin->fresh()->role);
     }
 
     /**

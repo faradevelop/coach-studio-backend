@@ -5,6 +5,7 @@ namespace App\Http\Requests\User;
 use App\Http\Requests\User\Concerns\UserProfileRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Models\User;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -16,12 +17,16 @@ class UpdateUserRequest extends FormRequest
     {
         $id = $this->route('id');
 
+        $usernameRules = ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($id)];
+        if ($this->input('username') !== User::whereKey($id)->value('username')) {
+            $usernameRules[] = 'regex:/^[^@\s]+$/';
+        }
+
         return $this->profileRules() + [
-            'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($id)],
+            'username' => $usernameRules,
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($id)],
             'role' => ['required', 'string', Rule::in(['admin', 'coach'])],
             'isActive' => ['sometimes', 'boolean'],
-            // password is intentionally not editable here — goes through change-password
         ];
     }
 }

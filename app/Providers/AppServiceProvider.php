@@ -46,6 +46,27 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // General per-user API limit (falls back to IP). Generous: Flutter issues few requests.
+        RateLimiter::for(
+            'api',
+            fn(Request $request) =>
+            Limit::perMinute(120)->by($request->user()?->id ?: $request->ip())
+        );
+
+        // Password changes: guessing the current password with a stolen token must be slow.
+        RateLimiter::for(
+            'sensitive',
+            fn(Request $request) =>
+            Limit::perMinute(5)->by('sensitive:' . ($request->user()?->id ?: $request->ip()))
+        );
+
+        // Admin write operations on users.
+        RateLimiter::for(
+            'admin-writes',
+            fn(Request $request) =>
+            Limit::perMinute(30)->by('admin-writes:' . ($request->user()?->id ?: $request->ip()))
+        );
+
         // No frontend reset page exists yet. This builds a placeholder URL so
         // Password::sendResetLink() doesn't fail trying to resolve a
         // non-existent 'password.reset' web route. With MAIL_MAILER=log, the

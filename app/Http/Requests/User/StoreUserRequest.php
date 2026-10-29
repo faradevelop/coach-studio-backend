@@ -16,7 +16,7 @@ class StoreUserRequest extends FormRequest
     public function rules(): array
     {
         return $this->profileRules() + [
-            'username' => ['required', 'string', 'max:50', 'unique:users,username'],
+            'username' => ['required', 'string', 'max:50', 'regex:/^[^@\s]+$/', 'unique:users,username'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'password' => PasswordRules::rules(),
             'role' => ['required', 'string', Rule::in(['admin', 'coach'])],

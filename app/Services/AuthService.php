@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\Models\User;
@@ -10,23 +9,39 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
+    private const TOKEN_LIFETIME_DAYS = 90;
+
     public function login(string $identifier, string $password): array
     {
         $user = filter_var($identifier, FILTER_VALIDATE_EMAIL)
             ? User::where('email', $identifier)->first()
             : User::where('username', $identifier)->first();
 
-        // Generic message regardless of which check failed — avoids
-        // revealing whether a given username/email exists.
-        if (!$user || !$user->is_active || !Hash::check($password, $user->password)) {
+        // When the user doesn't exist we still do one bcrypt operation, so the
+        // response time doesn't reveal whether the username/email exists.
+        $passwordMatches = $user
+            ? Hash::check($password, $user->password)
+            : $this->spendHashTime($password);
+
+        // Generic message regardless of which check failed.
+        if (! $user || ! $user->is_active || ! $passwordMatches) {
             throw ValidationException::withMessages([
                 'identifier' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        $token = $user->createToken('api')->plainTextToken;
+        // Fixed 90-day lifetime from issue time. It is NOT extended by activity.
+        $token = $user->createToken('api', ['*'], now()->addDays(self::TOKEN_LIFETIME_DAYS))
+            ->plainTextToken;
 
         return ['user' => $user, 'token' => $token];
+    }
+
+    private function spendHashTime(string $password): bool
+    {
+        Hash::make($password);
+
+        return false;
     }
 
     public function logout(PersonalAccessToken $token): void
@@ -36,7 +51,7 @@ class AuthService
 
     public function changePassword(User $user, string $currentPassword, string $newPassword): void
     {
-        if (!Hash::check($currentPassword, $user->password)) {
+        if (! Hash::check($currentPassword, $user->password)) {
             throw ValidationException::withMessages([
                 'currentPassword' => ['The current password is incorrect.'],
             ]);
@@ -61,7 +76,7 @@ class AuthService
     {
         $user = User::where('email', $email)->first();
 
-        if (!$user || !$user->is_active) {
+        if (! $user || ! $user->is_active) {
             // Same generic wording as an invalid token — does not reveal
             // that the account exists but is inactive.
             throw ValidationException::withMessages([

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ProgramExercise;
 use App\Models\WorkoutProgram;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProgramExerciseService
 {
@@ -19,13 +20,16 @@ class ProgramExerciseService
     public function create(array $data): ProgramExercise
     {
         return DB::transaction(function () use ($data) {
-            $this->lockWorkoutProgram($data['workout_program_id']);
+            $program = $this->lockWorkoutProgram($data['workout_program_id']);
+            $day = (int) $data['day'];
 
-            $nextOrder = $this->nextOrderForDay($data['workout_program_id'], $data['day']);
+            $this->assertDayWithinProgram($program, $day);
+
+            $nextOrder = $this->nextOrderForDay($program->id, $day);
 
             $programExercise = ProgramExercise::create([
-                'workout_program_id' => $data['workout_program_id'],
-                'day' => $data['day'],
+                'workout_program_id' => $program->id,
+                'day' => $day,
                 'order_index' => $nextOrder,
                 'sets' => $data['sets'],
                 'rest' => $data['rest'],
@@ -41,29 +45,26 @@ class ProgramExerciseService
     public function update(ProgramExercise $programExercise, array $data): ProgramExercise
     {
         return DB::transaction(function () use ($programExercise, $data) {
-            $workoutProgramId = $programExercise->workout_program_id;
-            $this->lockWorkoutProgram($workoutProgramId);
+            $program = $this->lockWorkoutProgram($programExercise->workout_program_id);
 
-            $oldDay = $programExercise->day;
-            $newDay = $data['day'];
+            // Re-read AFTER the lock: day/order may have changed while we waited.
+            $programExercise = $this->lockProgramExercise($programExercise->id);
 
-            if ($oldDay === $newDay) {
-                // Day unchanged: preserve the current order_index untouched.
-                $programExercise->update([
-                    'sets' => $data['sets'],
-                    'rest' => $data['rest'],
-                    'training_system' => $data['training_system'],
-                ]);
-            } else {
+            $oldDay = (int) $programExercise->day;
+            $newDay = (int) $data['day'];
+
+            if ($oldDay !== $newDay) {
                 // Day changed: treat as a move between days (renumbers both).
-                $this->moveToDay($programExercise, $workoutProgramId, $oldDay, $newDay);
-
-                $programExercise->update([
-                    'sets' => $data['sets'],
-                    'rest' => $data['rest'],
-                    'training_system' => $data['training_system'],
-                ]);
+                $this->assertDayWithinProgram($program, $newDay);
+                $this->moveToDay($programExercise, $program->id, $oldDay, $newDay);
             }
+            // Day unchanged: the current order_index is preserved untouched.
+
+            $programExercise->update([
+                'sets' => $data['sets'],
+                'rest' => $data['rest'],
+                'training_system' => $data['training_system'],
+            ]);
 
             $this->replaceItems($programExercise, $data['items']);
 
@@ -74,27 +75,25 @@ class ProgramExerciseService
     public function delete(ProgramExercise $programExercise): void
     {
         DB::transaction(function () use ($programExercise) {
-            $workoutProgramId = $programExercise->workout_program_id;
-            $day = $programExercise->day;
-
-            $this->lockWorkoutProgram($workoutProgramId);
+            $program = $this->lockWorkoutProgram($programExercise->workout_program_id);
+            $programExercise = $this->lockProgramExercise($programExercise->id);
+            $day = (int) $programExercise->day;
 
             // ProgramExerciseItems cascade-delete at the database level.
             $programExercise->delete();
 
-            $this->renumberDay($workoutProgramId, $day);
+            $this->renumberDay($program->id, $day);
         });
     }
 
     public function reorder(ProgramExercise $programExercise, int $targetOrder): ProgramExercise
     {
         return DB::transaction(function () use ($programExercise, $targetOrder) {
-            $workoutProgramId = $programExercise->workout_program_id;
-            $day = $programExercise->day;
+            $program = $this->lockWorkoutProgram($programExercise->workout_program_id);
+            $programExercise = $this->lockProgramExercise($programExercise->id);
+            $day = (int) $programExercise->day;
 
-            $this->lockWorkoutProgram($workoutProgramId);
-
-            $rows = ProgramExercise::where('workout_program_id', $workoutProgramId)
+            $rows = ProgramExercise::where('workout_program_id', $program->id)
                 ->where('day', $day)
                 ->orderBy('order_index')
                 ->lockForUpdate()
@@ -125,6 +124,20 @@ class ProgramExerciseService
         return WorkoutProgram::where('id', $workoutProgramId)
             ->lockForUpdate()
             ->firstOrFail();
+    }
+
+    private function lockProgramExercise(string $id): ProgramExercise
+    {
+        return ProgramExercise::whereKey($id)->lockForUpdate()->firstOrFail();
+    }
+
+    private function assertDayWithinProgram(WorkoutProgram $program, int $day): void
+    {
+        if ($day < 1 || $day > $program->days_per_week) {
+            throw ValidationException::withMessages([
+                'day' => ["The day must be between 1 and {$program->days_per_week} for this program."],
+            ]);
+        }
     }
 
     private function nextOrderForDay(string $workoutProgramId, int $day): int
@@ -214,8 +227,7 @@ class ProgramExerciseService
     private function replaceItems(ProgramExercise $programExercise, array $items): void
     {
         // Full atomic replace: the Flutter form always submits the complete
-        // item list on both create and update, never a partial patch, so
-        // delete-and-rebuild exactly matches existing app behavior.
+        // item list on both create and update, never a partial patch.
         $programExercise->items()->delete();
 
         foreach (array_values($items) as $index => $item) {

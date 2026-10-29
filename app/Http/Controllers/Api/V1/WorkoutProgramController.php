@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -16,8 +17,7 @@ use Illuminate\Validation\ValidationException;
 
 class WorkoutProgramController extends Controller
 {
-    public function __construct(private readonly WorkoutProgramService $service)
-    {}
+    public function __construct(private readonly WorkoutProgramService $service) {}
     public function index(ListWorkoutProgramsRequest $request): JsonResponse
     {
         // All programs of the coach: drafts (templates) AND athlete-assigned copies,
@@ -66,7 +66,7 @@ class WorkoutProgramController extends Controller
 
         // is_template is intentionally NOT editable: it is false only for athlete
         // copies, and that is decided exclusively by the assign flow.
-        $program->update([
+        $updated = $this->service->update($program, [
             'title'         => $data['title'],
             'goal'          => $data['goal'],
             'level'         => $data['level'],
@@ -75,7 +75,7 @@ class WorkoutProgramController extends Controller
         ]);
 
         return ApiResponse::success(
-            new WorkoutProgramResource($program->load('athleteAssignment.athlete')),
+            new WorkoutProgramResource($updated->load('athleteAssignment.athlete')),
             'Workout program updated'
         );
     }

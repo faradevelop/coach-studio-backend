@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\ProgramExercise;
 
+use App\Http\Requests\ProgramExercise\Concerns\ProgramExerciseRules;
+use App\Models\ProgramExerciseItem;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class UpdateProgramExerciseRequest extends FormRequest
 {
+    use ProgramExerciseRules;
+
     public function authorize(): bool
     {
         return true;
@@ -15,38 +18,18 @@ class UpdateProgramExerciseRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            // workoutId is accepted for shape-compatibility with the Dart
-            // ProgramExercise entity but is never applied on update — a
-            // ProgramExercise never moves between programs in the existing
-            // Flutter flow, only between days within the same program.
-            'workoutId' => ['required', 'uuid', 'exists:workout_programs,id'],
-            'day' => ['required', 'integer', 'min:1'],
-            'sets' => ['required', 'string', 'max:20'],
-            'rest' => ['required', 'string', 'max:20'],
-            'trainingSystem' => ['required', 'string', Rule::in(['normal', 'superSet'])],
-            'items' => ['required', 'array', 'min:1', 'max:2'],
-            'items.*.exerciseId' => ['required', 'uuid', 'exists:exercises,id'],
-            'items.*.reps' => ['required', 'array', 'min:1'],
-            'items.*.reps.*' => ['required', 'string', 'max:20'],
-            'items.*.tempo' => ['required', 'string', 'max:20'],
-            'items.*.description' => ['nullable', 'string'],
+        // Exercises already in this block stay valid even if they were deactivated later.
+        $existing = ProgramExerciseItem::where('program_exercise_id', $this->route('id'))
+            ->pluck('exercise_id')
+            ->all();
+
+        return $this->commonRules() + [
+            'items.*.exerciseId' => [
+                'required', 'uuid',
+                Rule::exists('exercises', 'id')->where(
+                    fn ($q) => $q->where('is_active', true)->orWhereIn('id', $existing)
+                ),
+            ],
         ];
-    }
-
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function (Validator $validator) {
-            $trainingSystem = $this->input('trainingSystem');
-            $itemCount = count($this->input('items', []));
-            $expected = $trainingSystem === 'superSet' ? 2 : 1;
-
-            if ($trainingSystem !== null && $itemCount !== $expected) {
-                $validator->errors()->add(
-                    'items',
-                    "A '{$trainingSystem}' training system requires exactly {$expected} item(s)."
-                );
-            }
-        });
     }
 }
