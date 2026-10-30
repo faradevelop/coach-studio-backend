@@ -105,7 +105,7 @@ class ProgramExerciseService
             $orderedIds = $rows->pluck('id')->all();
             $orderedIds = array_values(array_filter(
                 $orderedIds,
-                fn ($id) => $id !== $programExercise->id
+                fn($id) => $id !== $programExercise->id
             ));
             array_splice($orderedIds, $target - 1, 0, [$programExercise->id]);
 
@@ -192,18 +192,9 @@ class ProgramExerciseService
         int $sourceDay,
         int $destinationDay
     ): void {
-        // Renumber the source day without the row being moved.
-        $sourceIds = ProgramExercise::where('workout_program_id', $workoutProgramId)
-            ->where('day', $sourceDay)
-            ->where('id', '!=', $programExercise->id)
-            ->orderBy('order_index')
-            ->lockForUpdate()
-            ->pluck('id')
-            ->all();
-
-        $this->applyOrder($sourceIds);
-
-        // Append the moved row to the destination day (temporarily offset).
+        // 1. Move the row to the destination day at a temporary high order.
+        //    This frees its slot in the source day BEFORE any renumbering,
+        //    so no intermediate write can collide with the UNIQUE constraint.
         $destinationNextOrder = $this->nextOrderForDay($workoutProgramId, $destinationDay);
 
         $programExercise->update([
@@ -211,15 +202,11 @@ class ProgramExerciseService
             'order_index' => self::REORDER_OFFSET + $destinationNextOrder,
         ]);
 
-        // Renumber the destination day into a final contiguous sequence.
-        $destinationIds = ProgramExercise::where('workout_program_id', $workoutProgramId)
-            ->where('day', $destinationDay)
-            ->orderBy('order_index')
-            ->lockForUpdate()
-            ->pluck('id')
-            ->all();
+        // 2. Close the gap in the source day.
+        $this->renumberDay($workoutProgramId, $sourceDay);
 
-        $this->applyOrder($destinationIds);
+        // 3. Settle the moved row into a contiguous final order at the destination.
+        $this->renumberDay($workoutProgramId, $destinationDay);
 
         $programExercise->refresh();
     }

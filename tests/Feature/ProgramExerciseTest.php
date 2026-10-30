@@ -36,7 +36,7 @@ class ProgramExerciseTest extends TestCase
             'sets' => '3',
             'rest' => $rest,
             'trainingSystem' => count($exerciseIds) === 2 ? 'superSet' : 'normal',
-            'items' => array_map(fn ($id) => [
+            'items' => array_map(fn($id) => [
                 'exerciseId' => $id,
                 'reps' => ['10', '8'],
                 'tempo' => '-',
@@ -261,6 +261,40 @@ class ProgramExerciseTest extends TestCase
         // Editing the copy never touches the original.
         $this->deleteJson("/api/v1/program-exercises/{$copySuperSet->id}")->assertOk();
         $this->assertSame(['SS'], $this->labels($program, 1));
+    }
+
+    public function test_moving_the_first_block_to_an_empty_day_leaves_no_gaps(): void
+    {
+        [, $program] = $this->coachWithProgram();
+        $exercise = Exercise::factory()->create();
+        $a = $this->add($program, 1, 'A', $exercise);
+        $this->add($program, 1, 'B');
+
+        $this->putJson("/api/v1/program-exercises/{$a}", $this->payload($program, 3, [$exercise->id], 'A'))
+            ->assertOk()
+            ->assertJsonPath('data.day', 3)
+            ->assertJsonPath('data.order', 1);
+
+        $this->assertSame(['B'], $this->labels($program, 1));
+        $this->assertSame([1], $this->orders($program, 1));
+        $this->assertSame(['A'], $this->labels($program, 3));
+        $this->assertSame([1], $this->orders($program, 3));
+    }
+
+    public function test_moving_a_middle_block_closes_the_gap_in_the_source_day(): void
+    {
+        [, $program] = $this->coachWithProgram();
+        $exercise = Exercise::factory()->create();
+        $this->add($program, 1, 'A');
+        $b = $this->add($program, 1, 'B', $exercise);
+        $this->add($program, 1, 'C');
+
+        $this->putJson("/api/v1/program-exercises/{$b}", $this->payload($program, 2, [$exercise->id], 'B'))
+            ->assertOk();
+
+        $this->assertSame(['A', 'C'], $this->labels($program, 1));
+        $this->assertSame([1, 2], $this->orders($program, 1));
+        $this->assertSame(['B'], $this->labels($program, 2));
     }
 
     // ---------------------------------------------------------- muscles
