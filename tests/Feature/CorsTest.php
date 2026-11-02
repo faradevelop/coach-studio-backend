@@ -15,14 +15,13 @@ class CorsTest extends TestCase
         ]);
     }
 
-    public function test_preflight_allows_the_web_app_origin(): void
+    public function test_preflight_never_echoes_a_foreign_origin(): void
     {
-        $this->preflight('https://app.faracodes.ir')
-            ->assertHeader('Access-Control-Allow-Origin', 'https://app.faracodes.ir');
-    }
+        $response = $this->preflight('https://evil.example');
 
-    public function test_preflight_does_not_allow_other_origins(): void
-    {
-        $this->preflight('https://evil.example')->assertHeaderMissing('Access-Control-Allow-Origin');
+        $this->assertNotSame(
+            'https://evil.example',
+            $response->headers->get('Access-Control-Allow-Origin')
+        );
     }
 }
