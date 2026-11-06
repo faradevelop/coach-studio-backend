@@ -27,6 +27,7 @@ class WorkoutProgramResource extends JsonResource
             'notes' => $this->notes,
             'isTemplate' => (bool) $this->is_template,
             'status' => $isAssigned ? 'assigned' : 'template',
+            'createdAt' => $this->created_at?->toIso8601String(),
             // Present (possibly null) only when athleteAssignment is eager-loaded.
             'athleteId' => $this->when($assignmentLoaded, fn () => $assignment?->athlete_id),
             'athlete' => $this->when($assignmentLoaded, fn () => $athlete ? [

@@ -20,12 +20,12 @@ class WorkoutProgramController extends Controller
     public function __construct(private readonly WorkoutProgramService $service) {}
     public function index(ListWorkoutProgramsRequest $request): JsonResponse
     {
-        // All programs of the coach: drafts (templates) AND athlete-assigned copies,
-        // optionally narrowed by search / status / goal / level.
+        // All programs of the coach, newest first (created_at DESC, id DESC as a stable tie-breaker).
         $programs = $this->service
             ->applyListFilters($this->scopedQuery($request), $request->validated())
             ->with('athleteAssignment.athlete')
-            ->orderBy('title')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         return ApiResponse::success(WorkoutProgramResource::collection($programs));

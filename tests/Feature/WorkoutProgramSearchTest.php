@@ -77,4 +77,23 @@ class WorkoutProgramSearchTest extends TestCase
         $this->getJson('/api/v1/workout-programs?status=bogus')->assertStatus(422);
         $this->getJson('/api/v1/workout-programs?goal=flying')->assertStatus(422);
     }
+
+        public function test_list_is_ordered_newest_first(): void
+    {
+        $coach = User::factory()->create();
+
+        $old = WorkoutProgram::factory()->for($coach)->create(['title' => 'Old']);
+        $mid = WorkoutProgram::factory()->for($coach)->create(['title' => 'Mid']);
+        $new = WorkoutProgram::factory()->for($coach)->create(['title' => 'New']);
+
+        WorkoutProgram::whereKey($old->id)->update(['created_at' => now()->subDays(3)]);
+        WorkoutProgram::whereKey($mid->id)->update(['created_at' => now()->subDays(2)]);
+        WorkoutProgram::whereKey($new->id)->update(['created_at' => now()->subDay()]);
+
+        Sanctum::actingAs($coach);
+
+        $ids = array_column($this->getJson('/api/v1/workout-programs')->assertOk()->json('data'), 'id');
+
+        $this->assertSame([$new->id, $mid->id, $old->id], $ids);
+    }
 }
