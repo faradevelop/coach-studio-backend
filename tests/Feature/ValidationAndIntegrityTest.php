@@ -21,20 +21,30 @@ class ValidationAndIntegrityTest extends TestCase
         $muscle = Muscle::firstOrCreate(['slug' => 'chest'], ['name' => 'chest']);
 
         return array_merge([
-            'name' => 'Bench Press', 'type' => 'strength', 'difficulty' => 'beginner',
-            'equipment' => 'barbell', 'muscleSlugs' => [$muscle->slug],
+            'name' => 'Bench Press',
+            'type' => 'strength',
+            'difficulty' => 'beginner',
+            'equipment' => 'barbell',
+            'muscleSlugs' => [$muscle->slug],
         ], $overrides);
     }
 
     private function peModel(WorkoutProgram $program, int $day, Exercise $exercise): ProgramExercise
     {
         $pe = ProgramExercise::create([
-            'workout_program_id' => $program->id, 'day' => $day, 'order_index' => 1,
-            'sets' => '3', 'rest' => '30', 'training_system' => 'normal',
+            'workout_program_id' => $program->id,
+            'day' => $day,
+            'order_index' => 1,
+            'sets' => '3',
+            'rest' => '30',
+            'training_system' => 'normal',
         ]);
         ProgramExerciseItem::create([
-            'program_exercise_id' => $pe->id, 'exercise_id' => $exercise->id,
-            'order_index' => 1, 'reps' => ['10'], 'tempo' => '-',
+            'program_exercise_id' => $pe->id,
+            'exercise_id' => $exercise->id,
+            'order_index' => 1,
+            'reps' => ['10'],
+            'tempo' => '-',
         ]);
 
         return $pe;
@@ -43,7 +53,10 @@ class ValidationAndIntegrityTest extends TestCase
     private function pePayload(WorkoutProgram $program, int $day, Exercise $exercise, array $overrides = []): array
     {
         return array_merge([
-            'workoutId' => $program->id, 'day' => $day, 'sets' => '3', 'rest' => '30',
+            'workoutId' => $program->id,
+            'day' => $day,
+            'sets' => '3',
+            'rest' => '30',
             'trainingSystem' => 'normal',
             'items' => [['exerciseId' => $exercise->id, 'reps' => ['10'], 'tempo' => '-']],
         ], $overrides);
@@ -135,6 +148,27 @@ class ValidationAndIntegrityTest extends TestCase
         $this->assertStringEndsWith(' (Copy)', $title);
     }
 
+    public function test_duplicating_a_copy_appends_a_new_suffix_to_the_full_title(): void
+    {
+        $coach = User::factory()->create();
+        $program = WorkoutProgram::factory()->for($coach)->create(['title' => 'Plan']);
+        Sanctum::actingAs($coach);
+
+        $dup = fn(string $id) => $this->postJson("/api/v1/workout-programs/{$id}/duplicate")
+            ->assertStatus(201)->json('data');
+
+        $c1 = $dup($program->id);                       // Plan (Copy)
+        $c2 = $dup($program->id);                       // Plan (Copy 2)
+        $this->assertSame('Plan (Copy)', $c1['title']);
+        $this->assertSame('Plan (Copy 2)', $c2['title']);
+
+        $copyOfCopy = $dup($c2['id']);                  // Plan (Copy 2) (Copy)
+        $this->assertSame('Plan (Copy 2) (Copy)', $copyOfCopy['title']);
+
+        $second = $dup($c2['id']);                      // Plan (Copy 2) (Copy 2)
+        $this->assertSame('Plan (Copy 2) (Copy 2)', $second['title']);
+    }
+
     // ----------------------------------------------------- program exercises
 
     public function test_program_exercise_day_must_exist_in_the_program(): void
@@ -169,8 +203,12 @@ class ValidationAndIntegrityTest extends TestCase
         Sanctum::actingAs($coach);
 
         $this->postJson('/api/v1/program-exercises', [
-            'workoutId' => $program->id, 'day' => 1, 'sets' => '3', 'rest' => '30',
-            'trainingSystem' => 'normal', 'items' => 'abc',
+            'workoutId' => $program->id,
+            'day' => 1,
+            'sets' => '3',
+            'rest' => '30',
+            'trainingSystem' => 'normal',
+            'items' => 'abc',
         ])->assertStatus(422);
     }
 

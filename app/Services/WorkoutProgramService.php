@@ -158,8 +158,9 @@ class WorkoutProgramService
             return $trimmed; // length is validated by the request (max:255)
         }
 
-        $baseTitle = preg_replace('/ \(Copy(?: \d+)?\)$/u', '', $originalTitle);
-        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $baseTitle);
+        // The suffix is always appended to the FULL original title, so a copy of
+        // "X (Copy 2)" becomes "X (Copy 2) (Copy)" and never collides with a copy of "X".
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $originalTitle);
 
         $existingTitles = WorkoutProgram::query()
             ->where('user_id', $ownerId)
@@ -171,7 +172,7 @@ class WorkoutProgramService
         do {
             $suffix = $number === 1 ? ' (Copy)' : " (Copy {$number})";
             // Truncate the base so the whole title always fits the 255-char column.
-            $candidate = mb_substr($baseTitle, 0, 255 - mb_strlen($suffix)) . $suffix;
+            $candidate = mb_substr($originalTitle, 0, 255 - mb_strlen($suffix)) . $suffix;
             $number++;
         } while ($existingTitles->contains($candidate));
 
