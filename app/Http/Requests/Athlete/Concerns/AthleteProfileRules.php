@@ -26,7 +26,7 @@ trait AthleteProfileRules
         return [
             'firstName' => ['required', 'string', 'max:100'],
             'lastName' => ['required', 'string', 'max:100'],
-            'gender' => ['nullable', 'string', Rule::in(['male', 'female', 'other'])],
+            'gender' => ['nullable', 'string', Rule::in(['male','female'])],
             'dateOfBirth' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+\-\s()]+$/'],
             'email' => ['nullable', 'email', 'max:255'],
