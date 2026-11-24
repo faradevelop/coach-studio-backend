@@ -20,14 +20,17 @@ class ValidationAndIntegrityTest extends TestCase
     {
         $muscle = Muscle::where('slug', 'chest')->first()
             ?? Muscle::factory()->create(['slug' => 'chest']);
+
         return array_merge([
             'name' => 'Bench Press',
             'type' => 'strength',
             'difficulty' => 'beginner',
             'equipment' => 'barbell',
-            'muscleSlugs' => [$muscle->slug],
+            'primaryMuscleSlugs' => [$muscle->slug],
+            'secondaryMuscleSlugs' => [],
         ], $overrides);
     }
+
 
     private function peModel(WorkoutProgram $program, int $day, Exercise $exercise): ProgramExercise
     {
