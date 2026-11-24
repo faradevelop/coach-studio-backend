@@ -1,0 +1,304 @@
+{
+  "version": "1.1.0",
+  "name": "Coach Studio Muscle Catalog",
+  "description": "A practical muscle catalog for general bodybuilding and fitness. Muscles are organized into commonly recognized training-oriented groups. No body-region hierarchy is used.",
+  "language": "en",
+  "muscleGroups": [
+    {
+      "slug": "chest",
+      "name": "Chest",
+      "nameFa": "سینه",
+      "muscles": [
+        {
+          "slug": "pectoralis-major",
+          "name": "Pectoralis Major",
+          "nameFa": "سینه‌ای بزرگ"
+        },
+        {
+          "slug": "pectoralis-minor",
+          "name": "Pectoralis Minor",
+          "nameFa": "سینه‌ای کوچک"
+        }
+      ]
+    },
+    {
+      "slug": "back",
+      "name": "Back",
+      "nameFa": "پشت",
+      "muscles": [
+        {
+          "slug": "latissimus-dorsi",
+          "name": "Latissimus Dorsi",
+          "nameFa": "پشتی بزرگ"
+        },
+        {
+          "slug": "trapezius",
+          "name": "Trapezius",
+          "nameFa": "ذوزنقه‌ای"
+        },
+        {
+          "slug": "rhomboids",
+          "name": "Rhomboids",
+          "nameFa": "لوزی‌شکل‌ها"
+        },
+        {
+          "slug": "teres-major",
+          "name": "Teres Major",
+          "nameFa": "گرد بزرگ"
+        }
+      ]
+    },
+    {
+      "slug": "shoulders",
+      "name": "Shoulders",
+      "nameFa": "سرشانه",
+      "muscles": [
+        {
+          "slug": "anterior-deltoid",
+          "name": "Anterior Deltoid",
+          "nameFa": "دلتوئید قدامی"
+        },
+        {
+          "slug": "lateral-deltoid",
+          "name": "Lateral Deltoid",
+          "nameFa": "دلتوئید میانی"
+        },
+        {
+          "slug": "posterior-deltoid",
+          "name": "Posterior Deltoid",
+          "nameFa": "دلتوئید خلفی"
+        },
+        {
+          "slug": "supraspinatus",
+          "name": "Supraspinatus",
+          "nameFa": "فوق‌خاری"
+        },
+        {
+          "slug": "infraspinatus",
+          "name": "Infraspinatus",
+          "nameFa": "تحت‌خاری"
+        },
+        {
+          "slug": "teres-minor",
+          "name": "Teres Minor",
+          "nameFa": "گرد کوچک"
+        },
+        {
+          "slug": "subscapularis",
+          "name": "Subscapularis",
+          "nameFa": "زیرکتفی"
+        }
+      ]
+    },
+    {
+      "slug": "biceps",
+      "name": "Biceps",
+      "nameFa": "جلو بازو",
+      "muscles": [
+        {
+          "slug": "biceps-brachii",
+          "name": "Biceps Brachii",
+          "nameFa": "دوسر بازویی"
+        },
+        {
+          "slug": "brachialis",
+          "name": "Brachialis",
+          "nameFa": "بازویی"
+        },
+        {
+          "slug": "coracobrachialis",
+          "name": "Coracobrachialis",
+          "nameFa": "غرابی‌بازویی"
+        }
+      ]
+    },
+    {
+      "slug": "triceps",
+      "name": "Triceps",
+      "nameFa": "پشت بازو",
+      "muscles": [
+        {
+          "slug": "triceps-brachii",
+          "name": "Triceps Brachii",
+          "nameFa": "سه‌سر بازویی"
+        }
+      ]
+    },
+    {
+      "slug": "forearms",
+      "name": "Forearms",
+      "nameFa": "ساعد",
+      "muscles": [
+        {
+          "slug": "brachioradialis",
+          "name": "Brachioradialis",
+          "nameFa": "بازویی‌زند زبرین"
+        },
+        {
+          "slug": "wrist-flexors",
+          "name": "Wrist Flexors",
+          "nameFa": "خم‌کننده‌های مچ دست"
+        },
+        {
+          "slug": "wrist-extensors",
+          "name": "Wrist Extensors",
+          "nameFa": "بازکننده‌های مچ دست"
+        }
+      ]
+    },
+    {
+      "slug": "abdominals",
+      "name": "Abdominals",
+      "nameFa": "عضلات شکم",
+      "muscles": [
+        {
+          "slug": "rectus-abdominis",
+          "name": "Rectus Abdominis",
+          "nameFa": "راست شکمی"
+        },
+        {
+          "slug": "external-oblique",
+          "name": "External Oblique",
+          "nameFa": "مایل خارجی شکم"
+        },
+        {
+          "slug": "internal-oblique",
+          "name": "Internal Oblique",
+          "nameFa": "مایل داخلی شکم"
+        },
+        {
+          "slug": "transversus-abdominis",
+          "name": "Transversus Abdominis",
+          "nameFa": "عرضی شکم"
+        }
+      ]
+    },
+    {
+      "slug": "lower-back",
+      "name": "Lower Back",
+      "nameFa": "پایین کمر",
+      "muscles": [
+        {
+          "slug": "erector-spinae",
+          "name": "Erector Spinae",
+          "nameFa": "راست‌کننده ستون مهره‌ها"
+        }
+      ]
+    },
+    {
+      "slug": "glutes",
+      "name": "Glutes",
+      "nameFa": "سرینی",
+      "muscles": [
+        {
+          "slug": "gluteus-maximus",
+          "name": "Gluteus Maximus",
+          "nameFa": "سرینی بزرگ"
+        },
+        {
+          "slug": "gluteus-medius",
+          "name": "Gluteus Medius",
+          "nameFa": "سرینی میانی"
+        },
+        {
+          "slug": "gluteus-minimus",
+          "name": "Gluteus Minimus",
+          "nameFa": "سرینی کوچک"
+        }
+      ]
+    },
+    {
+      "slug": "quadriceps",
+      "name": "Quadriceps",
+      "nameFa": "چهارسر ران",
+      "muscles": [
+        {
+          "slug": "rectus-femoris",
+          "name": "Rectus Femoris",
+          "nameFa": "راست‌رانی"
+        },
+        {
+          "slug": "vastus-lateralis",
+          "name": "Vastus Lateralis",
+          "nameFa": "پهن خارجی"
+        },
+        {
+          "slug": "vastus-medialis",
+          "name": "Vastus Medialis",
+          "nameFa": "پهن داخلی"
+        },
+        {
+          "slug": "vastus-intermedius",
+          "name": "Vastus Intermedius",
+          "nameFa": "پهن میانی"
+        }
+      ]
+    },
+    {
+      "slug": "hamstrings",
+      "name": "Hamstrings",
+      "nameFa": "همسترینگ",
+      "muscles": [
+        {
+          "slug": "biceps-femoris",
+          "name": "Biceps Femoris",
+          "nameFa": "دوسر رانی"
+        },
+        {
+          "slug": "semitendinosus",
+          "name": "Semitendinosus",
+          "nameFa": "نیم‌وتری"
+        },
+        {
+          "slug": "semimembranosus",
+          "name": "Semimembranosus",
+          "nameFa": "نیم‌غشایی"
+        }
+      ]
+    },
+    {
+      "slug": "adductors",
+      "name": "Adductors",
+      "nameFa": "نزدیک‌کننده‌های ران",
+      "muscles": [
+        {
+          "slug": "adductor-longus",
+          "name": "Adductor Longus",
+          "nameFa": "نزدیک‌کننده بلند"
+        },
+        {
+          "slug": "adductor-brevis",
+          "name": "Adductor Brevis",
+          "nameFa": "نزدیک‌کننده کوتاه"
+        },
+        {
+          "slug": "adductor-magnus",
+          "name": "Adductor Magnus",
+          "nameFa": "نزدیک‌کننده بزرگ"
+        },
+        {
+          "slug": "gracilis",
+          "name": "Gracilis",
+          "nameFa": "نازک"
+        }
+      ]
+    },
+    {
+      "slug": "calves",
+      "name": "Calves",
+      "nameFa": "ساق پا",
+      "muscles": [
+        {
+          "slug": "gastrocnemius",
+          "name": "Gastrocnemius",
+          "nameFa": "دوقلو"
+        },
+        {
+          "slug": "soleus",
+          "name": "Soleus",
+          "nameFa": "نعلی"
+        }
+      ]
+    }
+  ]
+}

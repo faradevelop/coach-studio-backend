@@ -10,11 +10,17 @@ use Illuminate\Http\JsonResponse;
 
 class MuscleController extends Controller
 {
-    // Read-only reference data — no policy needed, same as Exercise's
-    // read side (any authenticated user, coach or admin, may list it).
+    // Read-only reference data: any authenticated user (coach or admin).
+    // Flat list ordered by group, then by the muscle's position in its group.
     public function index(): JsonResponse
     {
-        $muscles = Muscle::orderBy('name')->get();
+        $muscles = Muscle::query()
+            ->select('muscles.*')
+            ->join('muscle_groups', 'muscle_groups.id', '=', 'muscles.muscle_group_id')
+            ->orderBy('muscle_groups.sort_order')
+            ->orderBy('muscles.sort_order')
+            ->with('group')
+            ->get();
 
         return ApiResponse::success(MuscleResource::collection($muscles));
     }

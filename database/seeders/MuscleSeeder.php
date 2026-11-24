@@ -3,44 +3,55 @@
 namespace Database\Seeders;
 
 use App\Models\Muscle;
+use App\Models\MuscleGroup;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class MuscleSeeder extends Seeder
 {
+    public const CATALOG_PATH = 'data/muscle_catalog.json';
+
     /**
-     * Seeds the muscle catalog with actual individual muscles — not
-     * broad muscle groups/categories (e.g. no "arms", "legs", "core",
-     * "full_body"). Slugs are the stable identifier shared with the
-     * Flutter client — never rename an existing slug, only add new ones.
+     * Seeds muscle groups + muscles from the single source of truth
+     * database/data/muscle_catalog.json. Idempotent: rows are matched by
+     * slug, so re-running updates names/order but never duplicates.
      *
-     * If the Flutter UI later needs grouping (e.g. "Arms" containing
-     * biceps/triceps/forearms), that's a presentation-layer concept and
-     * should be modeled in Flutter, not by corrupting this table.
+     * `name` stores the Persian name (what the apps display), `name_en` the
+     * English one. sort_order follows the order in the JSON file.
+     * Slugs are stable identifiers: never rename an existing one.
      */
     public function run(): void
     {
-        $muscles = [
-            ['slug' => 'chest', 'name' => 'سینه'],
-            ['slug' => 'upper_back', 'name' => 'پشت فوقانی'],
-            ['slug' => 'lats', 'name' => 'لاتیسیموس (بال پشت)'],
-            ['slug' => 'lower_back', 'name' => 'پشت تحتانی'],
-            ['slug' => 'traps', 'name' => 'ذوزنقه‌ای'],
-            ['slug' => 'shoulders', 'name' => 'سرشانه'],
-            ['slug' => 'biceps', 'name' => 'جلو بازو'],
-            ['slug' => 'triceps', 'name' => 'پشت بازو'],
-            ['slug' => 'forearms', 'name' => 'ساعد'],
-            ['slug' => 'abs', 'name' => 'شکم'],
-            ['slug' => 'obliques', 'name' => 'مورب شکم'],
-            ['slug' => 'quadriceps', 'name' => 'چهارسر ران'],
-            ['slug' => 'hamstrings', 'name' => 'پشت ران'],
-            ['slug' => 'glutes', 'name' => 'باسن'],
-            ['slug' => 'calves', 'name' => 'ساق پا'],
-            ['slug' => 'hip_flexors', 'name' => 'خم‌کننده‌های لگن'],
-            ['slug' => 'adductors', 'name' => 'نزدیک‌کننده‌های ران'],
-        ];
+        $catalog = json_decode(
+            file_get_contents(database_path(self::CATALOG_PATH)),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
 
-        foreach ($muscles as $muscle) {
-            Muscle::firstOrCreate(['slug' => $muscle['slug']], $muscle);
-        }
+        DB::transaction(function () use ($catalog) {
+            foreach ($catalog['muscleGroups'] as $groupIndex => $groupData) {
+                $group = MuscleGroup::updateOrCreate(
+                    ['slug' => $groupData['slug']],
+                    [
+                        'name' => $groupData['nameFa'],
+                        'name_en' => $groupData['name'],
+                        'sort_order' => $groupIndex + 1,
+                    ]
+                );
+
+                foreach ($groupData['muscles'] as $muscleIndex => $muscleData) {
+                    Muscle::updateOrCreate(
+                        ['slug' => $muscleData['slug']],
+                        [
+                            'muscle_group_id' => $group->id,
+                            'name' => $muscleData['nameFa'],
+                            'name_en' => $muscleData['name'],
+                            'sort_order' => $muscleIndex + 1,
+                        ]
+                    );
+                }
+            }
+        });
     }
 }

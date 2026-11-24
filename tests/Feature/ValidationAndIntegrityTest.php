@@ -18,8 +18,8 @@ class ValidationAndIntegrityTest extends TestCase
 
     private function exercisePayload(array $overrides = []): array
     {
-        $muscle = Muscle::firstOrCreate(['slug' => 'chest'], ['name' => 'chest']);
-
+        $muscle = Muscle::where('slug', 'chest')->first()
+            ?? Muscle::factory()->create(['slug' => 'chest']);
         return array_merge([
             'name' => 'Bench Press',
             'type' => 'strength',

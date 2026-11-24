@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\AthleteController;
 use App\Http\Controllers\Api\V1\ExerciseController;
 use App\Http\Controllers\Api\V1\MuscleController;
+use App\Http\Controllers\Api\V1\MuscleGroupController;
 use App\Http\Controllers\Api\V1\ProgramExerciseController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WorkoutProgramController;
@@ -23,7 +24,9 @@ Route::prefix('v1')->group(function () {
         // Read-only reference data: the Exercise Bank is read by coaches and managed by admins.
         Route::get('exercises', [ExerciseController::class, 'index']);
         Route::get('exercises/{id}', [ExerciseController::class, 'show']);
+        // Muscle catalog: read-only, seeded from database/data/muscle_catalog.json.
         Route::get('muscles', [MuscleController::class, 'index']);
+        Route::get('muscle-groups', [MuscleGroupController::class, 'index']);
 
         // ── Admin only: Exercise management + Coach management ───────────
         Route::middleware('role:admin')->group(function () {

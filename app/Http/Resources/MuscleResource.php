@@ -13,6 +13,15 @@ class MuscleResource extends JsonResource
             'id' => $this->id,
             'slug' => $this->slug,
             'name' => $this->name,
+            'nameEn' => $this->name_en,
+            'sortOrder' => $this->sort_order,
+            // Only when the relation was eager-loaded (GET /muscles).
+            'group' => $this->whenLoaded('group', fn () => [
+                'id' => $this->group->id,
+                'slug' => $this->group->slug,
+                'name' => $this->group->name,
+                'nameEn' => $this->group->name_en,
+            ]),
         ];
     }
 }

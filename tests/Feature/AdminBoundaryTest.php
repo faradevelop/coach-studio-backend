@@ -51,7 +51,7 @@ class AdminBoundaryTest extends TestCase
 
         $this->postJson('/api/v1/exercises', [
             'name' => 'Squat', 'type' => 'strength', 'difficulty' => 'beginner',
-            'equipment' => 'barbell', 'muscleSlugs' => [$muscle->slug],
+            'equipment' => 'barbell', 'primaryMuscleSlugs' => [$muscle->slug],
         ])->assertStatus(201);
 
         User::factory()->count(2)->create();

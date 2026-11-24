@@ -130,7 +130,7 @@ class AuthorizationTest extends TestCase
             'type'        => 'strength',
             'difficulty'  => 'beginner',
             'equipment'   => 'barbell',
-            'muscleSlugs' => [$muscle->slug],
+            'primaryMuscleSlugs' => [$muscle->slug],
         ];
     }
 }

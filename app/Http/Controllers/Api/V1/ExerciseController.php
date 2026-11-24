@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\MuscleRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Exercise\StoreExerciseRequest;
 use App\Http\Requests\Exercise\UpdateExerciseRequest;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 class ExerciseController extends Controller
 {
+    private const WITH_MUSCLES = ['primaryMuscles', 'secondaryMuscles'];
+
     public function index(Request $request): JsonResponse
     {
         $exercises = Exercise::query()
@@ -49,50 +52,39 @@ class ExerciseController extends Controller
             )
             ->when(
                 $request->filled('difficulty'),
-                fn($q) => $q->where(
-                    'difficulty',
-                    $request->string('difficulty')
-                )
+                fn($q) => $q->where('difficulty', $request->string('difficulty'))
             )
             ->when(
                 $request->filled('equipment'),
-                fn($q) => $q->where(
-                    'equipment',
-                    $request->string('equipment')
-                )
+                fn($q) => $q->where('equipment', $request->string('equipment'))
             )
             ->when(
                 $request->filled('muscles'),
                 function ($q) use ($request) {
-                    // Accepts a comma-separated list, e.g. ?muscles=chest,triceps
-                    $slugs = array_filter(
-                        explode(',', $request->string('muscles'))
-                    );
+                    // Comma-separated list, e.g. ?muscles=pectoralis-major,triceps-brachii.
+                    // Matches the exercise's PRIMARY (target) muscles only (OR between slugs).
+                    $slugs = array_filter(explode(',', (string) $request->input('muscles')));
 
                     $q->whereHas(
-                        'muscles',
-                        fn($q2) => $q2->whereIn('slug', $slugs)
+                        'primaryMuscles',
+                        fn($q2) => $q2->whereIn('muscles.slug', $slugs)
                     );
                 }
             )
-            ->with('muscles')
+            ->with(self::WITH_MUSCLES)
             ->orderBy('name')
             ->get();
 
-        return ApiResponse::success(
-            ExerciseResource::collection($exercises)
-        );
+        return ApiResponse::success(ExerciseResource::collection($exercises));
     }
 
     public function show(string $id): JsonResponse
     {
         // Intentionally NOT filtered by is_active (Decision 7): a soft-deleted
         // exercise must still resolve when referenced by an existing item.
-        $exercise = Exercise::with('muscles')->findOrFail($id);
+        $exercise = Exercise::with(self::WITH_MUSCLES)->findOrFail($id);
 
-        return ApiResponse::success(
-            new ExerciseResource($exercise)
-        );
+        return ApiResponse::success(new ExerciseResource($exercise));
     }
 
     public function store(StoreExerciseRequest $request): JsonResponse
@@ -115,13 +107,17 @@ class ExerciseController extends Controller
                 'is_active' => $data['isActive'] ?? true,
             ]);
 
-            $this->syncMuscles($exercise, $data['muscleSlugs']);
+            $this->syncMuscles(
+                $exercise,
+                $data['primaryMuscleSlugs'],
+                $data['secondaryMuscleSlugs'] ?? []
+            );
 
             return $exercise;
         });
 
         return ApiResponse::success(
-            new ExerciseResource($exercise->fresh('muscles')),
+            new ExerciseResource($exercise->fresh(self::WITH_MUSCLES)),
             'Exercise created',
             201
         );
@@ -147,35 +143,49 @@ class ExerciseController extends Controller
                 'is_active' => $data['isActive'] ?? $exercise->is_active,
             ]);
 
-            $this->syncMuscles($exercise, $data['muscleSlugs']);
+            // PUT = full replacement: an omitted secondary list clears it.
+            $this->syncMuscles(
+                $exercise,
+                $data['primaryMuscleSlugs'],
+                $data['secondaryMuscleSlugs'] ?? []
+            );
         });
 
         return ApiResponse::success(
-            new ExerciseResource($exercise->fresh('muscles')),
+            new ExerciseResource($exercise->fresh(self::WITH_MUSCLES)),
             'Exercise updated'
         );
     }
+
     public function destroy(string $id): JsonResponse
     {
         $exercise = Exercise::findOrFail($id);
         $this->authorize('delete', $exercise);
-        $exercise->update([
-            'is_active' => false,
-        ]); // soft delete only
+        $exercise->update(['is_active' => false]); // soft delete only
 
-        return ApiResponse::success(
-            null,
-            'Exercise deleted'
-        );
+        return ApiResponse::success(null, 'Exercise deleted');
     }
 
-    private function syncMuscles(
-        Exercise $exercise,
-        array $slugs
-    ): void {
-        $muscleIds = Muscle::whereIn('slug', $slugs)
-            ->pluck('id');
+    /**
+     * Replaces the exercise's muscles with the given primary / secondary slugs
+     * (one pivot row per muscle, `role` tells which kind it is).
+     *
+     * @param array<int,string> $primarySlugs
+     * @param array<int,string> $secondarySlugs
+     */
+    private function syncMuscles(Exercise $exercise, array $primarySlugs, array $secondarySlugs): void
+    {
+        $ids = Muscle::whereIn('slug', array_merge($primarySlugs, $secondarySlugs))
+            ->pluck('id', 'slug');
 
-        $exercise->muscles()->sync($muscleIds);
+        $payload = [];
+        foreach ($primarySlugs as $slug) {
+            $payload[$ids[$slug]] = ['role' => MuscleRole::Primary->value];
+        }
+        foreach ($secondarySlugs as $slug) {
+            $payload[$ids[$slug]] = ['role' => MuscleRole::Secondary->value];
+        }
+
+        $exercise->muscles()->sync($payload);
     }
 }
